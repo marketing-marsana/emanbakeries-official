@@ -4,14 +4,30 @@
 @source "../components";
 
 @theme {
-  --color-primary: #1F2937;
-  --color-secondary: #6366F1;
-  --color-accent: #F59E0B;
+  --color-primary: #0f172a;
+  --color-secondary: #4f46e5;
+  --color-accent: #10b981;
+  --color-slate-950: #020617;
 
-  --font-sans: Inter, system-ui, sans-serif;
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-heading: 'Outfit', sans-serif;
 
   --spacing-sidebar: 18rem;
   --spacing-header: 5rem;
+
+  --animate-float: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
 }
 
 /* Custom Utilities */
