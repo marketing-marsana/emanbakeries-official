@@ -1,0 +1,36 @@
+[dotenv@17.3.1] injecting env (3) from .env.local -- tip: ≡ƒ¢á∩╕Å  run anywhere with `dotenvx run -- yourcommand`
+--- Debugging Muqeem CSV Keys ---
+First Row Keys: [
+  'SL',
+  'Iqama Number',
+  'Name',
+  'Gender',
+  'Nationality',
+  'Occupation',
+  'Passport Number',
+  'Passport Expiry Date',
+  'Iqama Issue Date',
+  'Iqama Expiry Date',
+  'Birth Date',
+  'Outside The Kingdom',
+  'Hijri Iqama Expiry Date',
+  'Employer Number'
+]
+First Row Values: {
+  SL: '1',
+  'Iqama Number': '2205956697',
+  Name: 'SUMANDAS SUKHANDU BIKASH',
+  Gender: 'Male',
+  Nationality: 'Bangladesh',
+  Occupation: 'Seller',
+  'Passport Number': 'EM0325784',
+  'Passport Expiry Date': '2028-12-30',
+  'Iqama Issue Date': '2004-05-17',
+  'Iqama Expiry Date': '2026-05-29',
+  'Birth Date': '1968-07-20',
+  'Outside The Kingdom': 'No',
+  'Hijri Iqama Expiry Date': '1447-12-12',
+  'Employer Number': '7015036309'
+}
+Sample Iqama from CSV: 2205956697
+DB Muqeem Snapshots Count: 102

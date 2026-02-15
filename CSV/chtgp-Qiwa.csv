@@ -1,0 +1,56 @@
+SL,Employee name,Employee ID,Nationality,Occupation,Skill classification,Date of birth,Gender,Notes,Salary Amount,IBAN,Mobile Number,EMAIL
+1,خلود عايد فهيد الشمري,1066722487,Saudi,Accountant,-,27/05/1979,Female,Without contract,4000,,,
+2,أمينه غازي محمد العتيبي,1080496977,Saudi,Accountant,-,-,Female,Without contract,4000,,,
+3,عبدالله عواد عبدالله الشمري,1097594343,Saudi,Accountant,-,1997-11-10 00:00:00,Male,Compliant,4000,,,
+4,عبدالله محمد عبدالله الشمري,1125072627,Saudi,Accountant,-,2004-03-04 00:00:00,Male,Compliant,4000,,,
+5,طلال محمد عبدالله الشمري,1128413612,Saudi,Accounts assistant,-,18/02/2005,Male,Compliant,4000,,,
+6,رزان غازي عبدالله الشمري,1129781645,Saudi,Accountant,-,20/06/2005,Female,Compliant,4000,,,
+7,ألين نايف بن عبدالله الشمري,1134186921,Saudi,Accountant,-,2006-03-06 00:00:00,Female,Without contract,4000,,,
+8,بندر غازي عبدالله الشمري,1134250834,Saudi,Customer complaints clerk,-,2006-11-06 00:00:00,Male,Terminated,4000,,,
+9,يقين محمد عبدالله الشمري,1136520176,Saudi,Accountant,-,14/11/2006,Female,Canceled (No response),4000,,,
+10,Sumandas Sukhandu Bikash,2205956697,Bengali,Seller,Basic skilled,20/07/1968,Male,Compliant,1300,SA0245000000023342488001,573106917.0,sumonchaudary0012@gmail.com
+11,Naheemudheen Parathodi,2235923253,Indian,Chief executive officer,High skilled,25/05/1985,Male,Compliant,12000,SA6345000000852160290001,552821842.0,naheemptd@emanbakeries.com
+12,Kabeer Poovathum Chottil Muhammed,2245613761,Indian,Baker,Basic skilled,15/05/1980,Male,Compliant,1300,SA0945000000023342348001,545984250.0,safvankabeer007@gmail.com
+13,Shijas Kareem Pallimukil,2256400710,Indian,Baker,Basic skilled,20/01/1983,Male,Compliant,1300,SA0345000000023340722001,557679177.0,pkshijas556@gmail.com
+14,Abdul Azeez Ayimpadi,2289306652,Indian,Baker,Basic skilled,1985-01-05 00:00:00,Male,Compliant,1300,SA1045000000023341746001,567538526.0,azeeseman123@gmail.com
+15,Abdul Munir Vazhayil,2289427870,Indian,Marketing specialist,High skilled,28/05/1975,Male,Compliant,8000,SA2845000000023343908001,593395106.0,muneervazhayil78@gmail.com
+16,Sidhik Kuruttukavil Kochu Muhammed,2289943199,Indian,Marketing specialist,High skilled,1975-06-05 00:00:00,Male,Compliant,8000,,568932689.0,sidhikk90@gmail.com
+17,Abdul Manaf Kuruttakavil Musthafa,2301750994,Indian,Baker,Basic skilled,1989-05-12 00:00:00,Male,Compliant,1300,SA4945000000023343197001,560247459.0,manafmusthafa3@gmail.com
+18,Riyas Kilivayil Alavikutty Kilivayil,2303530915,Indian,Offices and facilities cleaning worker,Basic skilled,1985-02-10 00:00:00,Male,Compliant,1300,SA6745000000221675051001,560438943.0,riyasvga786786@gmail.com
+19,Shamsudheen Manattu Hassan Kutty,2307985529,Indian,Marketing manager,High skilled,1975-01-12 00:00:00,Male,Compliant,8000,SA5345000000023340110001,554658796.0,shamsumanat9890@gmail.com
+20,Sabeer Kadookunnan Kunhimohamed Kadookunnan,2308393285,Indian,Baker,Basic skilled,18/08/1985,Male,Compliant,1300,SA2145000000023342108001,503762558.0,shifashifinkk@gmail.com
+21,Abdussamad Pandalan Ummer Pandalan,2308915301,Indian,Baker,Basic skilled,15/02/1983,Male,Compliant,1300,SA2145000000023341720001,581341225.0,samadthelakkad@gmail.com
+22,Chevu Nissar Muttathuchalil Moidu,2309399752,Indian,Baker,Basic skilled,24/04/1977,Male,Compliant,1300,SA7345000000023341456001,545214900.0,fasilchevunizarnizar@gmail.com
+23,Ebrahim Latheef Kavana Parambil,2309489785,Indian,Plumber,Basic skilled,25/04/1972,Male,Compliant,1300,SA1345000000023342462001,567642933.0,latheef20k5@gmail.com
+24,Ahammed Kabeer Vankalath,2311162198,Indian,Baker,Basic skilled,20/06/1988,Male,Compliant,1300,SA0245000000023341324001,560413288.0,ahammadkhabeer@gmail.com
+25,Ashraf Moonnan Kandathil Komu,2311479220,Indian,Baker,Basic skilled,1980-06-04 00:00:00,Male,Work Permit will expire in 29 days,1300,SA7145000000023341399001,559151648.0,asharafbapu4@gmail.com
+26,Musthafa Pathaya Purakkal,2322180403,Indian,Baker,Basic skilled,28/02/1980,Male,Compliant,1300,SA1245000000023341415001,577343723.0,m95042906@gmail.com
+27,Abdul Jabbar Mannakuzhi Maithen,2329326967,Indian,Baker,Basic skilled,1975-01-02 00:00:00,Male,Modification pending employee approval,1300,SA2145000000023345309001,542522610.0,jamaljamaljj5566@gmail.com
+28,Ibrahim Badushan Thottathikudiyi Kochunni,2331355376,Indian,Seller,Basic skilled,27/01/1989,Male,Compliant,1300,SA1745000000262432735001,532001228.0,badushai803@gmail.com
+29,Anvar Husain Mohammed Anchukandan,2345158345,Indian,Packaging worker,Basic skilled,25/05/1978,Male,Compliant,1300,,545409591.0,anvarhusain006@gmail.com
+30,Mohamed Safwan M Sally,2347675510,Sri lankan,Hotel housekeeper,Basic skilled,18/11/1974,Male,Compliant,1300,,,
+31,Muhammed Rafi Aliparambil,2354265015,Indian,Car driver,Basic skilled,1990-10-11 00:00:00,Male,Compliant,1300,SA1145000000023345606001,559904751.0,oorakamrafi591@gmail
+32,Sherin Kochukonickal Azeez,2354488948,Indian,Baker,Basic skilled,1992-10-01 00:00:00,Male,Compliant,1300,SA8145000000023340714001,546311750.0,kasherin384@gmail.com
+33,Konthalam Thellikkunnel Abdul Azees,2366253124,Indian,Baker,Basic skilled,29/03/1992,Male,Compliant,1300,SA1245000000023341803001,566770269.0,konthalamazees3806@gmail.com
+34,Sulfi Puthiyedathu Basheer,2376846297,Indian,Seller,Basic skilled,24/04/1990,Male,Modification pending employee approval,1300,SA4880000106608016952379,540200737.0,sulfibasheer4653@gmail.com
+35,Muhammed Parakkunnathu Ebrahim,2377814138,Indian,Packaging worker,Basic skilled,28/01/1993,Male,Compliant,1300,SA8945000000023340748001,567278143.0,foumalmammu@gmail.com
+36,Mansoorali Mansoorali Puthan Purakkal,2405299500,Indian,Chef,Basic skilled,18/02/1984,Male,Compliant,1300,SA0545000000023341555001,546238774.0,mansooreman4@gmail.com
+37,Aghil Aliyakkott Gangadharan,2439707783,Indian,Packaging worker,Basic skilled,1990-08-02 00:00:00,Male,Compliant,1300,SA9345000000221672785001,562692551.0,vishnuaghil67@gmail.com
+38,Sineesh Pathukudi Muhammed,2440029813,Indian,Packaging worker,Basic skilled,19/05/1976,Male,Compliant,1300,SA2245000000023340730001,546344301.0,akkuansal72@gmail.com
+39,Arif Koorimannil Poovathikkal,2453005585,Indian,Packaging worker,Basic skilled,1984-10-11 00:00:00,Male,Compliant,1300,SA6345000000262434046001,580876240.0,sinansilu382@gmail.com
+40,Sabeeb Manat Hassan Kutty,2455539706,Indian,Packaging worker,Basic skilled,25/10/1995,Male,Modification pending employee approval,1300,,537953762.0,manatshabeeb1994@gmail.com
+41,Muhammed Shali Vazhayil,2455820023,Indian,Packaging worker,Basic skilled,31/01/1997,Male,Compliant,1300,SA6145000000023340532001,540357284.0,salivazhayil@gmail.com
+42,Ansal Rasak,2477053272,Indian,Packaging worker,Basic skilled,31/03/1993,Male,Compliant,1300,SA6445000000221673171001,561569020.0,ansalrasak408@gmail.com
+43,Asinsha Asainar Vellirippil,2478222298,Indian,Packaging worker,Basic skilled,15/03/1996,Male,Compliant,1300,SA2045000000023341449001,541537246.0,asinshaasi@gmail.com
+44,Shabeer Ali Panakkathoden,2481393557,Indian,Load and unload worker,Basic skilled,1988-05-02 00:00:00,Male,Compliant,1300,SA8045000000023341316001,548796167.0,shabirp313@gmail.com
+45,Nejmudheen Sakhib,2481486153,Indian,Packaging worker,Basic skilled,1995-12-12 00:00:00,Male,Compliant,1300,SA4445000000023344849001,568357829.0,nejmudheensakhib786@gmail.com
+46,Al Ameen Kadukkunnan,2485790295,Indian,Packaging worker,Basic skilled,29/10/1997,Male,Compliant,1300,,540782805.0,alameenniravu@gmail.com
+47,Jishnu Raveendran,2485790337,Indian,Load and unload worker,Basic skilled,25/02/1998,Male,Compliant,1300,SA5345000000221673197001,566304691.0,jishnur8089@gmail.com
+48,Muhsin Kuruttukavil Musthafa,2501103358,Indian,Packaging worker,Basic skilled,1998-10-08 00:00:00,Male,Compliant,1300,SA4445000000023341357001,542677218.0,muhsinkrtkvl17@gmail.com
+49,Rifas Kanjirakkattu Kudiyil Basheer,2501103424,Indian,Packaging worker,Basic skilled,25/02/1990,Male,Compliant,1300,SA0445000000221672819001,547522498.0,rifaskbasheer@gmail.com
+50,Ansif Ali Kuruttukavil Alikunju,2501924977,Indian,Packaging worker,Basic skilled,16/12/1998,Male,Compliant,1300,,565053574.0,t9223356@gmail.com
+51,Ashkar Enjakudiyil Ali,2501925479,Indian,Packaging worker,Basic skilled,1998-02-11 00:00:00,Male,Compliant,1300,SA7945000000023341530001,561504608.0,ashkarali1232@gmail.com
+52,Alfas Aslam,2503874980,Indian,Packaging worker,Basic skilled,1999-04-08 00:00:00,Male,Compliant,1300,SA4245000000023340524001,540407512.0,alfasaslu7@gmail.com
+53,Shamsudheen Kuruttukavil Sainudheen,2511077311,Indian,Packaging worker,Basic skilled,1992-10-06 00:00:00,Male,Compliant,1300,SA8245000000023341761001,560531091.0,shamslabba786@gmail.com
+54,Md Akter Hosen,2515498364,Bengali,Packaging worker,Basic skilled,15/07/1997,Male,Compliant,1300,SA5245000000023345077001,567515343.0,hosenakthar0@gmail.com
+55,Mobarok Hossen,2552187540,Bengali,Constructing worker,Basic skilled,1987-01-02 00:00:00,Male,Compliant,1300,SA2245000000023345580001,561539926.0,md4102656@gmail.com

@@ -1,0 +1,5 @@
+[dotenv@17.3.1] injecting env (3) from .env.local -- tip: ≡ƒöÉ prevent building .env in docker: https://dotenvx.com/prebuild
+--- Starting Hyper Digital Profile Import ---
+Reading CSV files...
+Loaded: GOSI(55), Mudad(55), Muqeem(51), Qiwa(55)
+Found 60 unique employees to import/update.
