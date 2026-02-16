@@ -4,78 +4,76 @@
 @source "../components";
 
 @theme {
-  /* Amber Zinc Palette 2026 */
-  --color-zinc-950: #09090b;
-  --color-zinc-900: #18181b;
-  --color-zinc-800: #27272a;
-  --color-zinc-700: #3f3f46;
-  --color-zinc-500: #71717a;
-  --color-zinc-400: #a1a1aa;
+  /* Light Professional Theme 2026 */
+  --color-background: #F2F4F8;
+  --color-white: #ffffff;
+  --color-slate-50: #f8fafc;
+  --color-slate-100: #f1f5f9;
+  --color-slate-200: #e2e8f0;
+  --color-slate-300: #cbd5e1;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-600: #475569;
+  --color-slate-700: #334155;
+  --color-slate-800: #1e293b;
+  --color-slate-900: #0f172a;
 
-  --color-amber-400: #fbbf24;
-  --color-amber-500: #f59e0b;
+  --color-orange-50: #fff7ed;
+  --color-orange-100: #ffedd5;
+  --color-orange-200: #fed7aa;
+  --color-orange-300: #fdba74;
+  --color-orange-400: #fb923c;
+  --color-orange-500: #f97316;
   --color-orange-600: #ea580c;
 
   --font-sans: 'Inter', system-ui, sans-serif;
   --font-heading: 'Inter', sans-serif;
 
   --spacing-sidebar: 18rem;
-
-  --animate-pulse-slow: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-/* Custom Utilities for the Refined 2026 Look */
+/* Custom Utilities */
 @layer utilities {
-  .glass-card {
-    @apply bg-zinc-900/40 backdrop-blur-xl border border-white/5 shadow-2xl transition-all duration-300;
+  .glass-panel {
+    @apply bg-white/70 backdrop-blur-[10px];
   }
 
-  .amber-glow {
-    box-shadow: 0 0 20px rgba(245, 158, 11, 0.15);
+  .card-shadow {
+    box-shadow: 0 2px 20px rgba(0, 0, 0, 0.03);
   }
 
-  .ambient-glow {
-    @apply pointer-events-none fixed overflow-hidden -z-10 h-full w-full;
-  }
-
-  .text-glow {
-    text-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+  .card-shadow-lg {
+    box-shadow: 0 10px 40px -15px rgba(0, 0, 0, 0.05);
   }
 }
 
 /* Base Overrides */
 @layer base {
+  * {
+    @apply border-slate-200;
+  }
+
   body {
-    @apply bg-zinc-950 text-zinc-100 antialiased selection:bg-amber-500/30 overflow-x-hidden;
+    @apply bg-[#F2F4F8] text-slate-600 antialiased selection:bg-orange-200 selection:text-orange-900;
     font-family: 'Inter', sans-serif;
   }
 
-  /* Custom Scrollbar */
+  /* Hide scrollbar for cleaner UI */
   ::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  ::-webkit-scrollbar-track {
+    width: 0px;
     background: transparent;
   }
 
-  ::-webkit-scrollbar-thumb {
-    @apply bg-zinc-800 rounded-full hover:bg-zinc-700 transition-colors;
-  }
-}
-
-@keyframes pulse-soft {
-
-  0%,
-  100% {
-    opacity: 0.4;
+  /* Custom scrollbar for specific elements */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
   }
 
-  50% {
-    opacity: 0.6;
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-slate-300 rounded;
   }
-}
 
-.animate-pulse-soft {
-  animation: pulse-soft 3s ease-in-out infinite;
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-400;
+  }
 }

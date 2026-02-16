@@ -7,11 +7,11 @@ import {
     Users,
     Clock,
     CalendarDays,
-    AlertTriangle,
-    PartyPopper,
-    ChevronRight,
+    FileText,
+    Download,
+    MoreVertical,
     TrendingUp,
-    ShieldCheck
+    TrendingDown
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
@@ -20,13 +20,14 @@ export default function Dashboard() {
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState({
         totalEmployees: 0,
-        activeLeaves: 0,
-        pendingLeaves: 0,
-        attendanceRate: 98, // Placeholder for attendance if not in DB
-        complianceAlerts: 0
+        jobApplicants: 0,
+        presentToday: 0,
+        onLeave: 0,
+        employeeGrowth: '+4%',
+        applicantGrowth: '+12%',
+        attendanceChange: '-2%'
     });
-    const [recentActivity, setRecentActivity] = useState<any[]>([]);
-    const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
+    const [recentLeaves, setRecentLeaves] = useState<any[]>([]);
 
     useEffect(() => {
         fetchDashboardData();
@@ -35,18 +36,12 @@ export default function Dashboard() {
     const fetchDashboardData = async () => {
         setLoading(true);
         try {
-            // 1. Get total employees
+            // Get total employees
             const { count: empCount } = await supabase
                 .from('employees')
                 .select('*', { count: 'exact', head: true });
 
-            // 2. Get pending leaves
-            const { count: pendingCount } = await supabase
-                .from('leaves')
-                .select('*', { count: 'exact', head: true })
-                .eq('status', 'Pending');
-
-            // 3. Get active leaves (approved and currently within date range)
+            // Get active leaves
             const today = new Date().toISOString().split('T')[0];
             const { count: activeCount } = await supabase
                 .from('leaves')
@@ -55,46 +50,29 @@ export default function Dashboard() {
                 .lte('start_date', today)
                 .gte('end_date', today);
 
-            // 4. Fetch recent activities (e.g., last 5 leave requests)
-            const { data: recentLeaves } = await supabase
+            // Get recent leave requests
+            const { data: leaves } = await supabase
                 .from('leaves')
                 .select(`
                     *,
-                    employees (first_name, last_name, full_name_en)
+                    employees (first_name, last_name, full_name_en, position)
                 `)
                 .order('created_at', { ascending: false })
-                .limit(4);
+                .limit(5);
 
             setStats({
                 totalEmployees: empCount || 0,
-                activeLeaves: activeCount || 0,
-                pendingLeaves: pendingCount || 0,
-                attendanceRate: empCount ? Math.round(((empCount - (activeCount || 0)) / empCount) * 100) : 100,
-                complianceAlerts: 0 // Logic for compliance can be added later
+                jobApplicants: 0, // Placeholder
+                presentToday: (empCount || 0) - (activeCount || 0),
+                onLeave: activeCount || 0,
+                employeeGrowth: '+4%',
+                applicantGrowth: '+12%',
+                attendanceChange: '-2%'
             });
 
-            if (recentLeaves) {
-                setRecentActivity(recentLeaves.map(leave => ({
-                    id: leave.id,
-                    title: `${leave.employees?.full_name_en || 'Staff'} submitted ${leave.leave_type} leave`,
-                    detail: `Status: ${leave.status}`,
-                    time: new Date(leave.created_at).toLocaleString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        hour: 'numeric',
-                        minute: '2-digit',
-                        hour12: true
-                    }),
-                    type: leave.status === 'Approved' ? 'success' : leave.status === 'Rejected' ? 'error' : 'warning'
-                })));
+            if (leaves) {
+                setRecentLeaves(leaves);
             }
-
-            // Mock events for now as we don't have a birthdays table specifically, 
-            // but we could use employee DOB in future.
-            setUpcomingEvents([
-                { name: 'Emmen Marah', type: 'Birthday', date: '23-10-2026', initials: 'EM' },
-                { name: 'Emmen Maras', type: 'Anniversary', date: '16-12-2026', initials: 'EM' }
-            ]);
 
         } catch (error) {
             console.error('Error fetching dashboard data:', error);
@@ -107,202 +85,266 @@ export default function Dashboard() {
         hidden: { opacity: 0 },
         show: {
             opacity: 1,
-            transition: {
-                staggerChildren: 0.1
-            }
+            transition: { staggerChildren: 0.08 }
         }
     };
 
     const itemVariants = {
-        hidden: { opacity: 0, y: 20 },
+        hidden: { opacity: 0, y: 15 },
         show: { opacity: 1, y: 0 }
     };
+
+    if (loading) {
+        return (
+            <AppLayout>
+                <div className="flex items-center justify-center h-[60vh]">
+                    <div className="w-12 h-12 border-4 border-orange-500/20 border-t-orange-500 rounded-full animate-spin"></div>
+                </div>
+            </AppLayout>
+        );
+    }
 
     return (
         <AppLayout>
             <TopNav />
 
-            {loading ? (
-                <div className="flex items-center justify-center h-[60vh]">
-                    <div className="relative">
-                        <div className="w-12 h-12 border-4 border-amber-500/20 border-t-amber-500 rounded-full animate-spin"></div>
-                    </div>
+            <motion.div
+                variants={containerVariants}
+                initial="hidden"
+                animate="show"
+                className="pb-10"
+            >
+                {/* KPI Cards Row */}
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
+                    {/* Total Employees */}
+                    <motion.div variants={itemVariants} className="bg-white p-6 rounded-3xl shadow-[0_2px_20px_rgba(0,0,0,0.03)] border border-slate-100 flex flex-col justify-between h-40 relative overflow-hidden group hover:shadow-md transition-all">
+                        <div className="flex justify-between items-start z-10">
+                            <div className="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center text-orange-500 group-hover:scale-110 transition-transform">
+                                <Users size={20} />
+                            </div>
+                            <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full">{stats.employeeGrowth}</span>
+                        </div>
+                        <div className="z-10">
+                            <h3 className="text-3xl font-bold text-slate-800 tracking-tight">{stats.totalEmployees}</h3>
+                            <p className="text-sm font-medium text-slate-500 mt-1">Total Employees</p>
+                        </div>
+                        <Users className="absolute -right-4 -bottom-4 text-slate-50 opacity-50 rotate-12" size={100} />
+                    </motion.div>
+
+                    {/* Job Applicants */}
+                    <motion.div variants={itemVariants} className="bg-white p-6 rounded-3xl shadow-[0_2px_20px_rgba(0,0,0,0.03)] border border-slate-100 flex flex-col justify-between h-40 relative overflow-hidden group hover:shadow-md transition-all">
+                        <div className="flex justify-between items-start z-10">
+                            <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-500 group-hover:scale-110 transition-transform">
+                                <FileText size={20} />
+                            </div>
+                            <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full">{stats.applicantGrowth}</span>
+                        </div>
+                        <div className="z-10">
+                            <h3 className="text-3xl font-bold text-slate-800 tracking-tight">{stats.jobApplicants}</h3>
+                            <p className="text-sm font-medium text-slate-500 mt-1">Job Applicants</p>
+                        </div>
+                        <FileText className="absolute -right-4 -bottom-4 text-slate-50 opacity-50 rotate-12" size={100} />
+                    </motion.div>
+
+                    {/* Present Today */}
+                    <motion.div variants={itemVariants} className="bg-white p-6 rounded-3xl shadow-[0_2px_20px_rgba(0,0,0,0.03)] border border-slate-100 flex flex-col justify-between h-40 relative overflow-hidden group hover:shadow-md transition-all">
+                        <div className="flex justify-between items-start z-10">
+                            <div className="w-10 h-10 rounded-full bg-purple-50 flex items-center justify-center text-purple-500 group-hover:scale-110 transition-transform">
+                                <Clock size={20} />
+                            </div>
+                            <span className="text-xs font-bold text-red-500 bg-red-50 px-2 py-1 rounded-full">{stats.attendanceChange}</span>
+                        </div>
+                        <div className="z-10">
+                            <h3 className="text-3xl font-bold text-slate-800 tracking-tight">{stats.presentToday}</h3>
+                            <p className="text-sm font-medium text-slate-500 mt-1">Present Today</p>
+                        </div>
+                        <Clock className="absolute -right-4 -bottom-4 text-slate-50 opacity-50 rotate-12" size={100} />
+                    </motion.div>
+
+                    {/* On Leave */}
+                    <motion.div variants={itemVariants} className="bg-white p-6 rounded-3xl shadow-[0_2px_20px_rgba(0,0,0,0.03)] border border-slate-100 flex flex-col justify-between h-40 relative overflow-hidden group hover:shadow-md transition-all">
+                        <div className="flex justify-between items-start z-10">
+                            <div className="w-10 h-10 rounded-full bg-rose-50 flex items-center justify-center text-rose-500 group-hover:scale-110 transition-transform">
+                                <CalendarDays size={20} />
+                            </div>
+                            <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded-full">Active</span>
+                        </div>
+                        <div className="z-10">
+                            <h3 className="text-3xl font-bold text-slate-800 tracking-tight">{String(stats.onLeave).padStart(2, '0')}</h3>
+                            <p className="text-sm font-medium text-slate-500 mt-1">On Leave</p>
+                        </div>
+                        <CalendarDays className="absolute -right-4 -bottom-4 text-slate-50 opacity-50 rotate-12" size={100} />
+                    </motion.div>
                 </div>
-            ) : (
-                <motion.div
-                    variants={containerVariants}
-                    initial="hidden"
-                    animate="show"
-                >
-                    {/* KPI Cards Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-10">
-                        {/* Card 1: Total Employees */}
-                        <motion.div variants={itemVariants} className="group relative rounded-2xl p-px bg-gradient-to-b from-white/10 to-white/5 shadow-2xl overflow-hidden hover:-translate-y-1 transition-transform duration-500">
-                            <div className="absolute inset-0 bg-zinc-900/90 backdrop-blur-xl rounded-2xl"></div>
-                            <div className="relative h-full flex flex-col justify-between p-6">
-                                <div className="flex justify-between items-start mb-6">
-                                    <h3 className="text-base font-normal text-amber-200/80">Total Employees</h3>
-                                    <div className="p-2 bg-amber-500/10 rounded-lg border border-amber-500/20 shadow-[0_0_15px_rgba(245,158,11,0.1)]">
-                                        <Users className="w-5 h-5 text-amber-400" strokeWidth={1.5} />
-                                    </div>
-                                </div>
-                                <div>
-                                    <div className="flex items-baseline gap-2">
-                                        <span className="text-4xl font-light tracking-tighter text-white">{stats.totalEmployees}</span>
-                                    </div>
-                                    <p className="text-base text-zinc-500 mt-2 font-light">Active Staff</p>
-                                </div>
-                                <div className="absolute bottom-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-3xl -z-10"></div>
-                            </div>
-                        </motion.div>
 
-                        {/* Card 2: Attendance */}
-                        <motion.div variants={itemVariants} className="group relative rounded-2xl p-px bg-gradient-to-b from-white/10 to-white/5 shadow-2xl overflow-hidden hover:-translate-y-1 transition-transform duration-500">
-                            <div className="absolute inset-0 bg-zinc-900/90 backdrop-blur-xl rounded-2xl"></div>
-                            <div className="relative h-full flex flex-col justify-between p-6">
-                                <div className="flex justify-between items-start mb-6">
-                                    <h3 className="text-base font-normal text-orange-200/80">Attendance Rate</h3>
-                                    <div className="p-2 bg-orange-500/10 rounded-lg border border-orange-500/20 shadow-[0_0_15px_rgba(249,115,22,0.1)]">
-                                        <Clock className="w-5 h-5 text-orange-400" strokeWidth={1.5} />
-                                    </div>
-                                </div>
-                                <div>
-                                    <span className="text-4xl font-light tracking-tighter text-white">{stats.attendanceRate}%</span>
-                                    <div className="flex items-center gap-2 mt-4">
-                                        <div className="h-1 w-full bg-zinc-800 rounded-full overflow-hidden">
-                                            <div
-                                                className="h-full bg-orange-400 shadow-[0_0_10px_rgba(251,146,60,0.5)] transition-all duration-1000"
-                                                style={{ width: `${stats.attendanceRate}%` }}
-                                            ></div>
-                                        </div>
-                                    </div>
-                                    <p className="text-sm text-zinc-500 mt-3 font-light">
-                                        {stats.totalEmployees - stats.activeLeaves} Present Today
-                                    </p>
-                                </div>
-                            </div>
-                        </motion.div>
+                {/* Content Grid */}
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
 
-                        {/* Card 3: Pending Requests */}
-                        <motion.div variants={itemVariants} className="group relative rounded-2xl p-px bg-gradient-to-b from-white/10 to-white/5 shadow-2xl overflow-hidden hover:-translate-y-1 transition-transform duration-500">
-                            <div className="absolute inset-0 bg-zinc-900/90 backdrop-blur-xl rounded-2xl"></div>
-                            <div className="relative h-full flex flex-col justify-between p-6">
-                                <div className="flex justify-between items-start mb-6">
-                                    <h3 className="text-base font-normal text-emerald-200/80">Pending Requests</h3>
-                                    <div className="p-2 bg-emerald-500/10 rounded-lg border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.1)]">
-                                        <CalendarDays className="w-5 h-5 text-emerald-400" strokeWidth={1.5} />
-                                    </div>
+                    {/* Attendance Chart */}
+                    <motion.div variants={itemVariants} className="xl:col-span-2 bg-slate-900 rounded-[2.5rem] p-8 md:p-10 relative overflow-hidden shadow-2xl shadow-slate-200 text-white flex flex-col justify-between min-h-[420px]">
+                        <div className="flex justify-between items-start z-20 relative">
+                            <div>
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="bg-slate-700/50 text-slate-300 text-xs font-semibold px-3 py-1 rounded-full border border-slate-600">Yearly Report</span>
                                 </div>
-                                <div>
-                                    <span className="text-4xl font-light tracking-tighter text-white">{stats.pendingLeaves}</span>
-                                    <p className="text-base text-zinc-500 mt-2 font-light">Awaiting Approval</p>
-                                </div>
-                                <div className="absolute bottom-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-3xl -z-10"></div>
+                                <h3 className="text-2xl font-semibold tracking-tight">Attendance Overview</h3>
+                                <p className="text-slate-400 text-sm mt-1">Comparison with previous year</p>
                             </div>
-                        </motion.div>
+                            <button className="bg-orange-500 hover:bg-orange-400 text-white p-2.5 rounded-xl transition-colors">
+                                <Download size={20} />
+                            </button>
+                        </div>
 
-                        {/* Card 4: Compliance */}
-                        <motion.div variants={itemVariants} className="group relative rounded-2xl p-px bg-gradient-to-b from-rose-500/30 to-white/5 shadow-2xl overflow-hidden hover:-translate-y-1 transition-transform duration-500">
-                            <div className="absolute inset-0 bg-zinc-900/90 backdrop-blur-xl rounded-2xl"></div>
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-rose-500 to-red-600"></div>
-                            <div className="relative h-full flex flex-col justify-between p-6">
-                                <div className="flex justify-between items-start mb-6">
-                                    <h3 className="text-base font-normal text-rose-200/80">Security Protocol</h3>
-                                    <div className={`p-2 bg-rose-500/10 rounded-lg border border-rose-500/20 shadow-[0_0_15px_rgba(244,63,94,0.2)] ${stats.complianceAlerts > 0 ? 'animate-pulse' : ''}`}>
-                                        <ShieldCheck className={`w-5 h-5 ${stats.complianceAlerts > 0 ? 'text-rose-500' : 'text-zinc-500'}`} strokeWidth={1.5} />
-                                    </div>
-                                </div>
-                                <div>
-                                    <span className={`text-4xl font-light tracking-tighter ${stats.complianceAlerts > 0 ? 'text-rose-500' : 'text-white'}`}>
-                                        {stats.complianceAlerts}
-                                    </span>
-                                    <p className="text-base text-zinc-500 mt-2 font-light">Active Alerts</p>
-                                </div>
+                        <div className="grid grid-cols-3 gap-8 mt-8 mb-auto z-20 w-full md:w-3/4">
+                            <div>
+                                <p className="text-xs text-slate-400 font-medium uppercase tracking-wide">Avg. Check-in</p>
+                                <p className="text-xl font-bold mt-1 text-white">08:42 AM</p>
                             </div>
-                        </motion.div>
-                    </div>
-
-                    {/* Lower Sections Combined */}
-                    <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-
-                        {/* Recent Activity Section */}
-                        <div className="xl:col-span-2 relative rounded-2xl border border-white/5 bg-zinc-900/50 backdrop-blur-md shadow-lg overflow-hidden">
-                            <div className="p-6 border-b border-white/5 flex items-center justify-between">
-                                <h2 className="text-lg font-medium text-zinc-100">Live Activity Stream</h2>
-                                <button className="text-sm text-amber-400 hover:text-amber-300 transition-colors flex items-center gap-1 font-medium">
-                                    Full Log <ChevronRight size={14} />
-                                </button>
+                            <div>
+                                <p className="text-xs text-slate-400 font-medium uppercase tracking-wide">On-Time %</p>
+                                <p className="text-xl font-bold mt-1 text-orange-400">92%</p>
                             </div>
-                            <div className="divide-y divide-white/5 max-h-[480px] overflow-y-auto custom-scrollbar">
-                                {recentActivity.length > 0 ? recentActivity.map((activity) => (
-                                    <div key={activity.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-6 hover:bg-white/[0.02] transition-colors group">
-                                        <div className="flex items-start gap-4">
-                                            <div className={`mt-1.5 w-2 h-2 rounded-full shadow-[0_0_8px] ${activity.type === 'success' ? 'bg-emerald-500 shadow-emerald-500/80' :
-                                                activity.type === 'error' ? 'bg-rose-500 shadow-rose-500/80' :
-                                                    'bg-amber-500 shadow-amber-500/80'
-                                                }`}></div>
-                                            <div>
-                                                <p className="text-base text-zinc-200 group-hover:text-white transition-colors font-medium">{activity.title}</p>
-                                                <p className="text-sm text-zinc-500 mt-1 font-light">{activity.detail}</p>
-                                            </div>
-                                        </div>
-                                        <span className="text-xs text-zinc-500 font-mono mt-2 sm:mt-0 whitespace-nowrap opacity-60">[{activity.time}]</span>
-                                    </div>
-                                )) : (
-                                    <div className="p-12 text-center text-zinc-600 font-light">
-                                        No recent activities detected in the control stream.
-                                    </div>
-                                )}
+                            <div>
+                                <p className="text-xs text-slate-400 font-medium uppercase tracking-wide">Overtime</p>
+                                <p className="text-xl font-bold mt-1 text-white">420 Hrs</p>
                             </div>
                         </div>
 
-                        {/* Upcoming Events Panel */}
-                        <div className="relative rounded-2xl border border-white/5 bg-zinc-900/50 backdrop-blur-md shadow-lg overflow-hidden flex flex-col">
-                            <div className="p-6 border-b border-white/5 bg-gradient-to-r from-amber-500/10 to-transparent">
-                                <h2 className="text-lg font-medium text-amber-100 flex items-center gap-2">
-                                    Cultural Events <PartyPopper size={18} className="text-amber-500" />
-                                </h2>
-                                <p className="text-sm text-zinc-400 mt-1">Birthdays & Anniversaries</p>
-                            </div>
+                        {/* Chart SVG */}
+                        <div className="absolute inset-x-0 bottom-0 h-56 w-full pointer-events-none">
+                            <svg className="absolute bottom-0 left-0 w-full h-full" preserveAspectRatio="none" viewBox="0 0 1200 300">
+                                <defs>
+                                    <linearGradient id="chartGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                        <stop offset="0%" style={{ stopColor: '#f97316', stopOpacity: 0.3 }}></stop>
+                                        <stop offset="100%" style={{ stopColor: '#f97316', stopOpacity: 0 }}></stop>
+                                    </linearGradient>
+                                </defs>
+                                <line x1="0" y1="200" x2="1200" y2="200" stroke="rgba(255,255,255,0.1)" strokeWidth="1" strokeDasharray="5,5"></line>
+                                <line x1="0" y1="100" x2="1200" y2="100" stroke="rgba(255,255,255,0.1)" strokeWidth="1" strokeDasharray="5,5"></line>
+                                <path d="M0,250 C150,240 200,100 350,150 C500,200 550,50 700,80 C850,110 900,180 1050,140 C1150,110 1200,160 1200,160 V300 H0 Z" fill="url(#chartGradient)"></path>
+                                <path d="M0,250 C150,240 200,100 350,150 C500,200 550,50 700,80 C850,110 900,180 1050,140 C1150,110 1200,160 1200,160" fill="none" stroke="#f97316" strokeWidth="3" strokeLinecap="round"></path>
+                            </svg>
+                        </div>
+                    </motion.div>
 
-                            <div className="p-6 space-y-6 flex-1 overflow-y-auto">
-                                {upcomingEvents.map((event, i) => (
-                                    <div key={i} className="flex items-center justify-between group cursor-default">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-10 h-10 rounded-xl bg-zinc-800 border border-white/10 flex items-center justify-center text-zinc-400 group-hover:bg-amber-500 group-hover:text-zinc-950 transition-all duration-500 rotate-3 group-hover:rotate-0">
-                                                <span className="text-sm font-bold tracking-tighter">{event.initials}</span>
-                                            </div>
-                                            <div>
-                                                <p className="text-base text-zinc-200 font-semibold tracking-tight">{event.name}</p>
-                                                <p className="text-xs text-zinc-500 uppercase tracking-widest">{event.type}</p>
-                                            </div>
-                                        </div>
-                                        <div className="px-3 py-1 rounded-lg bg-white/5 border border-white/5 text-[10px] font-mono text-zinc-400 group-hover:text-amber-400 transition-colors">
-                                            {event.date}
-                                        </div>
-                                    </div>
-                                ))}
+                    {/* Employee Status Donut */}
+                    <motion.div variants={itemVariants} className="bg-white rounded-[2.5rem] p-8 shadow-[0_10px_40px_-15px_rgba(0,0,0,0.05)] flex flex-col h-full border border-slate-100">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-lg font-bold text-slate-800 tracking-tight">Employee Status</h3>
+                            <button className="text-slate-400 hover:text-orange-500">
+                                <MoreVertical size={24} />
+                            </button>
+                        </div>
 
-                                {/* Illustration Area */}
-                                <div className="flex-1 flex items-center justify-center pt-10 opacity-10">
-                                    <TrendingUp size={120} className="text-zinc-100" strokeWidth={0.5} />
-                                </div>
-                            </div>
-
-                            <div className="p-6 border-t border-white/5 bg-zinc-950/30">
-                                <div className="flex items-center justify-between">
-                                    <p className="text-xs font-semibold text-zinc-500 uppercase tracking-[0.2em]">Operational Status</p>
-                                    <div className="flex items-center gap-2">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                                        <span className="text-xs text-emerald-500 font-bold uppercase">Optimal</span>
-                                    </div>
+                        <div className="flex-1 flex flex-col justify-center items-center py-4">
+                            <div className="relative w-48 h-48">
+                                <div className="w-full h-full rounded-full" style={{ background: 'conic-gradient(#f97316 0% 65%, #3b82f6 65% 85%, #cbd5e1 85% 100%)' }}></div>
+                                <div className="absolute inset-0 m-4 bg-white rounded-full flex flex-col items-center justify-center shadow-inner">
+                                    <span className="text-4xl font-bold text-slate-800 tracking-tight">{stats.totalEmployees}</span>
+                                    <span className="text-xs text-slate-400 font-medium uppercase mt-1">Total Staff</span>
                                 </div>
                             </div>
                         </div>
 
-                    </div>
-                </motion.div>
-            )}
+                        <div className="space-y-3 mt-4">
+                            <div className="flex justify-between items-center text-sm">
+                                <div className="flex items-center gap-2">
+                                    <span className="w-3 h-3 rounded-full bg-orange-500"></span>
+                                    <span className="text-slate-600 font-medium">Permanent</span>
+                                </div>
+                                <span className="font-bold text-slate-800">65%</span>
+                            </div>
+                            <div className="flex justify-between items-center text-sm">
+                                <div className="flex items-center gap-2">
+                                    <span className="w-3 h-3 rounded-full bg-blue-500"></span>
+                                    <span className="text-slate-600 font-medium">Contract</span>
+                                </div>
+                                <span className="font-bold text-slate-800">20%</span>
+                            </div>
+                            <div className="flex justify-between items-center text-sm">
+                                <div className="flex items-center gap-2">
+                                    <span className="w-3 h-3 rounded-full bg-slate-300"></span>
+                                    <span className="text-slate-600 font-medium">Probation</span>
+                                </div>
+                                <span className="font-bold text-slate-800">15%</span>
+                            </div>
+                        </div>
+                    </motion.div>
+
+                    {/* Recent Leave Requests Table */}
+                    <motion.div variants={itemVariants} className="xl:col-span-3 bg-white rounded-[2.5rem] p-8 shadow-[0_10px_40px_-15px_rgba(0,0,0,0.05)] border border-slate-100">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+                            <div>
+                                <h3 className="text-lg font-bold text-slate-800 tracking-tight">Recent Leave Requests</h3>
+                                <p className="text-sm text-slate-400 mt-1">Manage employee time-off applications.</p>
+                            </div>
+                            <div className="flex gap-2">
+                                <button className="px-4 py-2 bg-slate-50 text-slate-600 rounded-xl text-xs font-semibold hover:bg-slate-100 transition-colors">Filter</button>
+                                <button className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-semibold hover:bg-slate-800 transition-colors shadow-lg shadow-slate-200">View All</button>
+                            </div>
+                        </div>
+
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="text-xs text-slate-400 font-medium border-b border-slate-100">
+                                        <th className="pb-4 pl-2 font-medium uppercase tracking-wider">Employee</th>
+                                        <th className="pb-4 font-medium uppercase tracking-wider">Leave Type</th>
+                                        <th className="pb-4 font-medium uppercase tracking-wider">Date</th>
+                                        <th className="pb-4 font-medium uppercase tracking-wider">Duration</th>
+                                        <th className="pb-4 font-medium uppercase tracking-wider">Status</th>
+                                        <th className="pb-4 pr-2 font-medium uppercase tracking-wider text-right">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="text-sm">
+                                    {recentLeaves.length > 0 ? recentLeaves.map((leave, i) => (
+                                        <tr key={leave.id} className="group hover:bg-slate-50 transition-colors">
+                                            <td className="py-4 pl-2">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 font-semibold text-xs">
+                                                        {leave.employees?.first_name?.[0]}{leave.employees?.last_name?.[0]}
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-semibold text-slate-800">{leave.employees?.full_name_en || 'Unknown'}</p>
+                                                        <p className="text-xs text-slate-400">{leave.employees?.position || 'Staff'}</p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="py-4 text-slate-600 font-medium">{leave.leave_type}</td>
+                                            <td className="py-4 text-slate-500">
+                                                {new Date(leave.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                            </td>
+                                            <td className="py-4 text-slate-500">
+                                                {Math.ceil((new Date(leave.end_date).getTime() - new Date(leave.start_date).getTime()) / (1000 * 60 * 60 * 24)) + 1} Days
+                                            </td>
+                                            <td className="py-4">
+                                                <span className={`px-3 py-1 rounded-full text-xs font-bold ${leave.status === 'Approved' ? 'bg-green-100 text-green-600' :
+                                                        leave.status === 'Rejected' ? 'bg-red-100 text-red-600' :
+                                                            'bg-orange-100 text-orange-600'
+                                                    }`}>
+                                                    {leave.status}
+                                                </span>
+                                            </td>
+                                            <td className="py-4 pr-2 text-right">
+                                                <button className="text-slate-400 hover:text-slate-800">
+                                                    <MoreVertical size={20} />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    )) : (
+                                        <tr>
+                                            <td colSpan={6} className="py-12 text-center text-slate-400">
+                                                No leave requests found
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </motion.div>
+
+                </div>
+            </motion.div>
         </AppLayout>
     );
 }

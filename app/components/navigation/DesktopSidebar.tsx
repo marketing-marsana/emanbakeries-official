@@ -5,69 +5,69 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { navItems, NavItem } from './navConfig';
 import { motion } from 'framer-motion';
-import { Wheat, User, ChevronDown, LogOut } from 'lucide-react';
+import { Settings, User } from 'lucide-react';
 
 export const DesktopSidebar = () => {
     const pathname = usePathname();
 
     return (
-        <aside className="w-full lg:w-72 bg-zinc-900/40 backdrop-blur-xl border-b lg:border-b-0 lg:border-r border-white/5 flex flex-col z-20 sticky top-0 lg:h-screen transition-all duration-300">
+        <aside className="w-20 lg:w-72 bg-white flex flex-col justify-between py-8 border-r border-slate-100 h-screen shadow-[4px_0_24px_rgba(0,0,0,0.02)] transition-all duration-300">
             {/* Logo Section */}
-            <div className="h-24 flex items-center px-8 border-b border-white/5">
-                <div className="flex items-center gap-3">
-                    <div className="relative group">
-                        <div className="absolute inset-0 bg-amber-500 blur opacity-40 group-hover:opacity-60 transition-opacity rounded-full"></div>
-                        <div className="relative bg-gradient-to-br from-amber-400 to-orange-600 p-2.5 rounded-xl shadow-lg border-t border-white/20">
-                            <Wheat className="w-6 h-6 text-white" />
-                        </div>
-                    </div>
-                    <span className="text-xl font-medium tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-zinc-100 to-zinc-400">
-                        Eman Bakery
-                    </span>
+            <div className="px-0 lg:px-8 flex flex-col items-center lg:items-start gap-2">
+                <div className="w-12 h-12 bg-slate-900 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-slate-200">
+                    <span className="text-2xl">🍞</span>
+                </div>
+                <div className="hidden lg:block mt-4 text-center lg:text-left">
+                    <h2 className="text-base font-bold tracking-tight text-slate-800 uppercase">Eman Bakery</h2>
+                    <p className="text-xs text-slate-400 font-medium tracking-wide">HR MANAGEMENT</p>
                 </div>
             </div>
 
             {/* Navigation Links */}
-            <nav className="flex-1 px-4 py-8 space-y-1 overflow-y-auto custom-scrollbar">
+            <nav className="flex-1 flex flex-col gap-2 px-4 lg:px-6 mt-10 overflow-y-auto custom-scrollbar">
+                <p className="hidden lg:block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 pl-3">Main Menu</p>
+
                 {navItems.map((item: NavItem) => {
                     const isActive = pathname === item.link;
                     return (
                         <Link key={item.name} href={item.link}>
                             <motion.div
-                                whileHover={{ x: 4 }}
+                                whileHover={{ x: 2 }}
                                 whileTap={{ scale: 0.98 }}
-                                className={`group flex items-center gap-4 px-4 py-4 rounded-xl transition-all border duration-200 ${isActive
-                                        ? 'bg-white/5 border-white/5 shadow-inner'
-                                        : 'text-zinc-400 hover:text-zinc-100 hover:bg-white/5 border-transparent hover:border-white/5'
+                                className={`group flex items-center gap-3 px-3 py-3 rounded-xl font-medium transition-all ${isActive
+                                        ? 'bg-slate-50 text-slate-900 shadow-sm ring-1 ring-slate-100'
+                                        : 'text-slate-500 hover:bg-white hover:text-slate-900 hover:shadow-sm hover:ring-1 hover:ring-slate-100'
                                     }`}
                             >
-                                <div className={`transition-all duration-300 ${isActive ? 'text-amber-400 scale-110' : 'group-hover:text-zinc-100'}`}>
+                                <div className={`transition-colors ${isActive ? 'text-orange-500' : 'group-hover:text-orange-500'}`}>
                                     {item.icon}
                                 </div>
-                                <span className={`text-base tracking-tight ${isActive ? 'font-medium text-zinc-100' : 'font-normal'}`}>
-                                    {item.name}
-                                </span>
-                                {isActive && (
-                                    <div className="ml-auto w-1.5 h-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)]"></div>
-                                )}
+                                <span className="hidden lg:block text-sm">{item.name}</span>
                             </motion.div>
                         </Link>
                     );
                 })}
             </nav>
 
-            {/* User Mini Profile */}
-            <div className="p-6 border-t border-white/5">
-                <button className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 transition-colors text-left group">
-                    <div className="w-10 h-10 rounded-full ring-2 ring-zinc-800 bg-zinc-800 flex items-center justify-center overflow-hidden">
-                        <User className="text-zinc-400" size={20} />
+            {/* User Profile Section */}
+            <div className="px-0 lg:px-8 flex flex-col items-center lg:items-start gap-4 mt-4">
+                <div className="w-full h-px bg-slate-100"></div>
+                <Link href="/settings" className="group flex items-center gap-3 w-full text-slate-500 hover:text-orange-600 transition-all">
+                    <Settings size={22} />
+                    <span className="hidden lg:block text-sm font-medium">Settings</span>
+                </Link>
+                <div className="flex items-center gap-3 w-full pt-2">
+                    <div className="relative">
+                        <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center overflow-hidden shadow-sm ring-2 ring-white">
+                            <User className="text-slate-500" size={20} />
+                        </div>
+                        <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></div>
                     </div>
-                    <div className="flex-1">
-                        <p className="text-sm font-medium text-zinc-200">HR Manager</p>
-                        <p className="text-xs text-zinc-500">eman@bakery.com</p>
+                    <div className="hidden lg:block overflow-hidden">
+                        <p className="text-sm font-semibold text-slate-800 truncate">HR Manager</p>
+                        <p className="text-xs text-slate-400 truncate">eman@bakery.com</p>
                     </div>
-                    <ChevronDown className="w-4 h-4 text-zinc-500 group-hover:text-zinc-300 transition-colors" />
-                </button>
+                </div>
             </div>
         </aside>
     );
