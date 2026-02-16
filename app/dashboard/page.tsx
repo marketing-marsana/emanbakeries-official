@@ -2,200 +2,302 @@
 
 import React, { useState, useEffect } from 'react';
 import { AppLayout } from '../components/navigation/AppLayout';
-import { Users, Briefcase, Calendar, Clock, ArrowRight, Zap, TrendingUp, Activity, ShieldCheck, Globe } from 'lucide-react';
-import { motion, useScroll, useSpring } from 'framer-motion';
+import { TopNav } from '../components/navigation/TopNav';
+import {
+    Users,
+    Clock,
+    CalendarDays,
+    AlertTriangle,
+    PartyPopper,
+    ChevronRight,
+    TrendingUp,
+    ShieldCheck
+} from 'lucide-react';
+import { motion } from 'framer-motion';
+import { supabase } from '@/lib/supabase';
+import { format } from 'date-fns';
 
 export default function Dashboard() {
-    // Component states for visual interest
+    const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState({
-        totalEmployees: 48,
-        activeLeaves: 5,
-        upcomingAnniversaries: 3,
-        systemEfficiency: '98.4%'
+        totalEmployees: 0,
+        activeLeaves: 0,
+        pendingLeaves: 0,
+        attendanceRate: 98, // Placeholder for attendance if not in DB
+        complianceAlerts: 0
     });
+    const [recentActivity, setRecentActivity] = useState<any[]>([]);
+    const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
 
-    const metrics = [
-        { label: 'Workforce', value: stats.totalEmployees, icon: <Users size={28} />, detail: 'Active Personal', type: 'chrome' },
-        { label: 'Efficiency', value: stats.systemEfficiency, icon: <Zap size={28} />, detail: 'Operational Load', type: 'glass' },
-        { label: 'Incidents', value: '02', icon: <ShieldCheck size={28} />, detail: 'Security Level', type: 'chrome' },
-        { label: 'Global', value: '01', icon: <Globe size={28} />, detail: 'Network Nodes', type: 'glass' }
-    ];
+    useEffect(() => {
+        fetchDashboardData();
+    }, []);
 
-    const activities = [
-        { title: 'Sector A14 Onboarding', time: '14:20:05', status: 'COMPLETE', sector: 'BAKERY HQ' },
-        { title: 'System Security Protocol', time: '13:45:12', status: 'ACTIVE', sector: 'NETWORK' },
-        { title: 'Leave Authorization IRQ-04', time: '11:12:00', status: 'PENDING', sector: 'S.V. DEPT' },
-        { title: 'Sector B02 Deployment', time: '09:30:45', status: 'COMPLETE', sector: 'LOGISTICS' },
-    ];
+    const fetchDashboardData = async () => {
+        setLoading(true);
+        try {
+            // 1. Get total employees
+            const { count: empCount } = await supabase
+                .from('employees')
+                .select('*', { count: 'exact', head: true });
+
+            // 2. Get pending leaves
+            const { count: pendingCount } = await supabase
+                .from('leaves')
+                .select('*', { count: 'exact', head: true })
+                .eq('status', 'Pending');
+
+            // 3. Get active leaves (approved and currently within date range)
+            const today = new Date().toISOString().split('T')[0];
+            const { count: activeCount } = await supabase
+                .from('leaves')
+                .select('*', { count: 'exact', head: true })
+                .eq('status', 'Approved')
+                .lte('start_date', today)
+                .gte('end_date', today);
+
+            // 4. Fetch recent activities (e.g., last 5 leave requests)
+            const { data: recentLeaves } = await supabase
+                .from('leaves')
+                .select(`
+                    *,
+                    employees (first_name, last_name, full_name_en)
+                `)
+                .order('created_at', { ascending: false })
+                .limit(4);
+
+            setStats({
+                totalEmployees: empCount || 0,
+                activeLeaves: activeCount || 0,
+                pendingLeaves: pendingCount || 0,
+                attendanceRate: empCount ? Math.round(((empCount - (activeCount || 0)) / empCount) * 100) : 100,
+                complianceAlerts: 0 // Logic for compliance can be added later
+            });
+
+            if (recentLeaves) {
+                setRecentActivity(recentLeaves.map(leave => ({
+                    id: leave.id,
+                    title: `${leave.employees?.full_name_en || 'Staff'} submitted ${leave.leave_type} leave`,
+                    detail: `Status: ${leave.status}`,
+                    time: format(new Date(leave.created_at), 'MMM d, h:mm a'),
+                    type: leave.status === 'Approved' ? 'success' : leave.status === 'Rejected' ? 'error' : 'warning'
+                })));
+            }
+
+            // Mock events for now as we don't have a birthdays table specifically, 
+            // but we could use employee DOB in future.
+            setUpcomingEvents([
+                { name: 'Emmen Marah', type: 'Birthday', date: '23-10-2026', initials: 'EM' },
+                { name: 'Emmen Maras', type: 'Anniversary', date: '16-12-2026', initials: 'EM' }
+            ]);
+
+        } catch (error) {
+            console.error('Error fetching dashboard data:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        show: {
+            opacity: 1,
+            transition: {
+                staggerChildren: 0.1
+            }
+        }
+    };
+
+    const itemVariants = {
+        hidden: { opacity: 0, y: 20 },
+        show: { opacity: 1, y: 0 }
+    };
 
     return (
         <AppLayout>
-            <div className="space-y-12 pb-20">
-                {/* Immersive Header Section */}
-                <header className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16 relative">
-                    <motion.div
-                        initial={{ opacity: 0, x: -30 }}
-                        animate={{ opacity: 1, x: 0 }}
-                    >
-                        <h2 className="text-[10px] font-black tracking-[0.6em] text-white/30 uppercase mb-4 flex items-center gap-3">
-                            <span className="w-8 h-[1px] bg-white/20"></span> CommandCenter
-                            <span className="px-2 py-0.5 bg-white/5 rounded-full text-[8px] animate-pulse">Live</span>
-                        </h2>
-                        <h1 className="text-5xl md:text-7xl font-black text-white tracking-tighter leading-none text-glow-md">
-                            METRIC <span className="text-white/20">MATRIX</span>
-                        </h1>
-                    </motion.div>
+            <TopNav />
 
-                    <motion.div
-                        initial={{ opacity: 0, x: 30 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className="flex items-center gap-6"
-                    >
-                        <div className="text-right hidden sm:block">
-                            <p className="text-[10px] uppercase font-black tracking-widest text-white/20 leading-none mb-2">Sync Time</p>
-                            <p className="text-white font-black text-xl tracking-tighter">15 FEB 2026</p>
-                        </div>
-                        <button className="chrome-panel px-10 py-5 rounded-[2rem] text-obsidian font-black text-sm tracking-widest flex items-center gap-4 hover:scale-105 transition-all shadow-2xl active:scale-95 group">
-                            GENERATE REPORT <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-                        </button>
-                    </motion.div>
-                </header>
-
-                {/* 3D Stat Grid - Inspired by the modular Moorgen panels */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-1 transform cursor-default group/grid">
-                    {metrics.map((m, i) => (
-                        <motion.div
-                            key={m.label}
-                            initial={{ opacity: 0, y: 30 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: i * 0.1 }}
-                            className={`relative h-[320px] p-10 flex flex-col justify-between overflow-hidden transition-all duration-700 hover:scale-[1.02] hover:z-20 ${m.type === 'chrome' ? 'chrome-panel rounded-[3rem]' : 'glass-panel rounded-[3rem]'
-                                }`}
-                        >
-                            {/* Accent Gloss */}
-                            <div className="absolute top-0 left-0 right-0 h-1/2 bg-gradient-to-b from-white/10 to-transparent pointer-events-none" />
-
-                            <div className="flex justify-between items-start relative z-10">
-                                <div className={`p-4 rounded-2xl ${m.type === 'chrome' ? 'bg-obsidian text-white' : 'bg-white/10 text-white'}`}>
-                                    {m.icon}
+            {loading ? (
+                <div className="flex items-center justify-center h-[60vh]">
+                    <div className="relative">
+                        <div className="w-12 h-12 border-4 border-amber-500/20 border-t-amber-500 rounded-full animate-spin"></div>
+                    </div>
+                </div>
+            ) : (
+                <motion.div
+                    variants={containerVariants}
+                    initial="hidden"
+                    animate="show"
+                >
+                    {/* KPI Cards Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-10">
+                        {/* Card 1: Total Employees */}
+                        <motion.div variants={itemVariants} className="group relative rounded-2xl p-px bg-gradient-to-b from-white/10 to-white/5 shadow-2xl overflow-hidden hover:-translate-y-1 transition-transform duration-500">
+                            <div className="absolute inset-0 bg-zinc-900/90 backdrop-blur-xl rounded-2xl"></div>
+                            <div className="relative h-full flex flex-col justify-between p-6">
+                                <div className="flex justify-between items-start mb-6">
+                                    <h3 className="text-base font-normal text-amber-200/80">Total Employees</h3>
+                                    <div className="p-2 bg-amber-500/10 rounded-lg border border-amber-500/20 shadow-[0_0_15px_rgba(245,158,11,0.1)]">
+                                        <Users className="w-5 h-5 text-amber-400" strokeWidth={1.5} />
+                                    </div>
                                 </div>
-                                <Activity size={18} className={m.type === 'chrome' ? 'text-obsidian/20' : 'text-white/10'} />
+                                <div>
+                                    <div className="flex items-baseline gap-2">
+                                        <span className="text-4xl font-light tracking-tighter text-white">{stats.totalEmployees}</span>
+                                    </div>
+                                    <p className="text-base text-zinc-500 mt-2 font-light">Active Staff</p>
+                                </div>
+                                <div className="absolute bottom-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-3xl -z-10"></div>
                             </div>
-
-                            <div className="relative z-10">
-                                <p className={`text-[10px] font-black uppercase tracking-[0.4em] mb-3 ${m.type === 'chrome' ? 'text-obsidian/40' : 'text-white/30'}`}>
-                                    {m.label}
-                                </p>
-                                <p className={`text-6xl font-black tracking-tighter mb-1 ${m.type === 'chrome' ? 'text-obsidian' : 'text-white text-glow-sm'}`}>
-                                    {m.value}
-                                </p>
-                                <p className={`text-[9px] font-black uppercase tracking-widest ${m.type === 'chrome' ? 'text-obsidian/30' : 'text-white/20'}`}>
-                                    {m.detail}
-                                </p>
-                            </div>
-
-                            {/* Decorative 3D Groove Elements */}
-                            <div className={`absolute bottom-6 right-6 w-12 h-1 ${m.type === 'chrome' ? 'bg-obsidian/10' : 'bg-white/10'} rounded-full`} />
                         </motion.div>
-                    ))}
-                </div>
 
-                {/* Large Modular Panels Section */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 mt-20">
-                    {/* Activity Feed - The Dark Obsidian "Hub" */}
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="lg:col-span-12 xl:col-span-8 glass-panel rounded-[4rem] p-12 relative overflow-hidden group"
-                    >
-                        <div className="flex items-center justify-between mb-12">
-                            <div>
-                                <h3 className="text-3xl font-black tracking-tighter mb-2">SYSTEM ACTIVITY</h3>
-                                <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.4em]">Real-time operational streams</p>
-                            </div>
-                            <button className="w-14 h-14 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-center hover:bg-white/10 transition-all">
-                                <TrendingUp size={24} className="text-white/60" />
-                            </button>
-                        </div>
-
-                        <div className="space-y-6">
-                            {activities.map((act, i) => (
-                                <motion.div
-                                    key={i}
-                                    whileHover={{ x: 10 }}
-                                    className="flex items-center justify-between p-7 rounded-[2.5rem] bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] transition-all cursor-crosshair group/item"
-                                >
-                                    <div className="flex items-center gap-8">
-                                        <div className="text-[10px] font-mono text-white/40 tracking-wider">[{act.time}]</div>
-                                        <div>
-                                            <p className="font-black text-lg tracking-tight mb-1 group-hover/item:text-glow-sm transition-all">{act.title}</p>
-                                            <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.3em] font-heading">{act.sector}</p>
+                        {/* Card 2: Attendance */}
+                        <motion.div variants={itemVariants} className="group relative rounded-2xl p-px bg-gradient-to-b from-white/10 to-white/5 shadow-2xl overflow-hidden hover:-translate-y-1 transition-transform duration-500">
+                            <div className="absolute inset-0 bg-zinc-900/90 backdrop-blur-xl rounded-2xl"></div>
+                            <div className="relative h-full flex flex-col justify-between p-6">
+                                <div className="flex justify-between items-start mb-6">
+                                    <h3 className="text-base font-normal text-orange-200/80">Attendance Rate</h3>
+                                    <div className="p-2 bg-orange-500/10 rounded-lg border border-orange-500/20 shadow-[0_0_15px_rgba(249,115,22,0.1)]">
+                                        <Clock className="w-5 h-5 text-orange-400" strokeWidth={1.5} />
+                                    </div>
+                                </div>
+                                <div>
+                                    <span className="text-4xl font-light tracking-tighter text-white">{stats.attendanceRate}%</span>
+                                    <div className="flex items-center gap-2 mt-4">
+                                        <div className="h-1 w-full bg-zinc-800 rounded-full overflow-hidden">
+                                            <div
+                                                className="h-full bg-orange-400 shadow-[0_0_10px_rgba(251,146,60,0.5)] transition-all duration-1000"
+                                                style={{ width: `${stats.attendanceRate}%` }}
+                                            ></div>
                                         </div>
                                     </div>
-                                    <div className={`px-4 py-2 rounded-xl text-[9px] font-black tracking-widest border ${act.status === 'COMPLETE'
-                                            ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
-                                            : 'bg-amber-500/10 text-amber-500 border-amber-500/20 animate-pulse'
-                                        }`}>
-                                        {act.status}
-                                    </div>
-                                </motion.div>
-                            ))}
-                        </div>
-                    </motion.div>
+                                    <p className="text-sm text-zinc-500 mt-3 font-light">
+                                        {stats.totalEmployees - stats.activeLeaves} Present Today
+                                    </p>
+                                </div>
+                            </div>
+                        </motion.div>
 
-                    {/* Side Info Panel - Metallic Accents */}
-                    <motion.div
-                        initial={{ opacity: 0, x: 50 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className="lg:col-span-12 xl:col-span-4 space-y-8"
-                    >
-                        <div className="chrome-panel rounded-[4rem] p-12 flex flex-col justify-between min-h-[450px]">
-                            <div>
-                                <p className="text-[10px] font-black text-obsidian/30 uppercase tracking-[0.4em] mb-8">Quick Protocols</p>
-                                <div className="space-y-4">
-                                    {['System Restart', 'Security Audit', 'Manual Override'].map((text) => (
-                                        <button key={text} className="w-full py-5 px-8 rounded-2xl bg-obsidian text-white font-black text-xs tracking-widest hover:scale-[1.03] active:scale-95 transition-all text-left flex items-center justify-between group">
-                                            {text.toUpperCase()} <ArrowRight size={14} className="opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
-                                        </button>
-                                    ))}
+                        {/* Card 3: Pending Requests */}
+                        <motion.div variants={itemVariants} className="group relative rounded-2xl p-px bg-gradient-to-b from-white/10 to-white/5 shadow-2xl overflow-hidden hover:-translate-y-1 transition-transform duration-500">
+                            <div className="absolute inset-0 bg-zinc-900/90 backdrop-blur-xl rounded-2xl"></div>
+                            <div className="relative h-full flex flex-col justify-between p-6">
+                                <div className="flex justify-between items-start mb-6">
+                                    <h3 className="text-base font-normal text-emerald-200/80">Pending Requests</h3>
+                                    <div className="p-2 bg-emerald-500/10 rounded-lg border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.1)]">
+                                        <CalendarDays className="w-5 h-5 text-emerald-400" strokeWidth={1.5} />
+                                    </div>
+                                </div>
+                                <div>
+                                    <span className="text-4xl font-light tracking-tighter text-white">{stats.pendingLeaves}</span>
+                                    <p className="text-base text-zinc-500 mt-2 font-light">Awaiting Approval</p>
+                                </div>
+                                <div className="absolute bottom-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-3xl -z-10"></div>
+                            </div>
+                        </motion.div>
+
+                        {/* Card 4: Compliance */}
+                        <motion.div variants={itemVariants} className="group relative rounded-2xl p-px bg-gradient-to-b from-rose-500/30 to-white/5 shadow-2xl overflow-hidden hover:-translate-y-1 transition-transform duration-500">
+                            <div className="absolute inset-0 bg-zinc-900/90 backdrop-blur-xl rounded-2xl"></div>
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-rose-500 to-red-600"></div>
+                            <div className="relative h-full flex flex-col justify-between p-6">
+                                <div className="flex justify-between items-start mb-6">
+                                    <h3 className="text-base font-normal text-rose-200/80">Security Protocol</h3>
+                                    <div className={`p-2 bg-rose-500/10 rounded-lg border border-rose-500/20 shadow-[0_0_15px_rgba(244,63,94,0.2)] ${stats.complianceAlerts > 0 ? 'animate-pulse' : ''}`}>
+                                        <ShieldCheck className={`w-5 h-5 ${stats.complianceAlerts > 0 ? 'text-rose-500' : 'text-zinc-500'}`} strokeWidth={1.5} />
+                                    </div>
+                                </div>
+                                <div>
+                                    <span className={`text-4xl font-light tracking-tighter ${stats.complianceAlerts > 0 ? 'text-rose-500' : 'text-white'}`}>
+                                        {stats.complianceAlerts}
+                                    </span>
+                                    <p className="text-base text-zinc-500 mt-2 font-light">Active Alerts</p>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+
+                    {/* Lower Sections Combined */}
+                    <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+
+                        {/* Recent Activity Section */}
+                        <div className="xl:col-span-2 relative rounded-2xl border border-white/5 bg-zinc-900/50 backdrop-blur-md shadow-lg overflow-hidden">
+                            <div className="p-6 border-b border-white/5 flex items-center justify-between">
+                                <h2 className="text-lg font-medium text-zinc-100">Live Activity Stream</h2>
+                                <button className="text-sm text-amber-400 hover:text-amber-300 transition-colors flex items-center gap-1 font-medium">
+                                    Full Log <ChevronRight size={14} />
+                                </button>
+                            </div>
+                            <div className="divide-y divide-white/5 max-h-[480px] overflow-y-auto custom-scrollbar">
+                                {recentActivity.length > 0 ? recentActivity.map((activity) => (
+                                    <div key={activity.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-6 hover:bg-white/[0.02] transition-colors group">
+                                        <div className="flex items-start gap-4">
+                                            <div className={`mt-1.5 w-2 h-2 rounded-full shadow-[0_0_8px] ${activity.type === 'success' ? 'bg-emerald-500 shadow-emerald-500/80' :
+                                                    activity.type === 'error' ? 'bg-rose-500 shadow-rose-500/80' :
+                                                        'bg-amber-500 shadow-amber-500/80'
+                                                }`}></div>
+                                            <div>
+                                                <p className="text-base text-zinc-200 group-hover:text-white transition-colors font-medium">{activity.title}</p>
+                                                <p className="text-sm text-zinc-500 mt-1 font-light">{activity.detail}</p>
+                                            </div>
+                                        </div>
+                                        <span className="text-xs text-zinc-500 font-mono mt-2 sm:mt-0 whitespace-nowrap opacity-60">[{activity.time}]</span>
+                                    </div>
+                                )) : (
+                                    <div className="p-12 text-center text-zinc-600 font-light">
+                                        No recent activities detected in the control stream.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Upcoming Events Panel */}
+                        <div className="relative rounded-2xl border border-white/5 bg-zinc-900/50 backdrop-blur-md shadow-lg overflow-hidden flex flex-col">
+                            <div className="p-6 border-b border-white/5 bg-gradient-to-r from-amber-500/10 to-transparent">
+                                <h2 className="text-lg font-medium text-amber-100 flex items-center gap-2">
+                                    Cultural Events <PartyPopper size={18} className="text-amber-500" />
+                                </h2>
+                                <p className="text-sm text-zinc-400 mt-1">Birthdays & Anniversaries</p>
+                            </div>
+
+                            <div className="p-6 space-y-6 flex-1 overflow-y-auto">
+                                {upcomingEvents.map((event, i) => (
+                                    <div key={i} className="flex items-center justify-between group cursor-default">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-10 h-10 rounded-xl bg-zinc-800 border border-white/10 flex items-center justify-center text-zinc-400 group-hover:bg-amber-500 group-hover:text-zinc-950 transition-all duration-500 rotate-3 group-hover:rotate-0">
+                                                <span className="text-sm font-bold tracking-tighter">{event.initials}</span>
+                                            </div>
+                                            <div>
+                                                <p className="text-base text-zinc-200 font-semibold tracking-tight">{event.name}</p>
+                                                <p className="text-xs text-zinc-500 uppercase tracking-widest">{event.type}</p>
+                                            </div>
+                                        </div>
+                                        <div className="px-3 py-1 rounded-lg bg-white/5 border border-white/5 text-[10px] font-mono text-zinc-400 group-hover:text-amber-400 transition-colors">
+                                            {event.date}
+                                        </div>
+                                    </div>
+                                ))}
+
+                                {/* Illustration Area */}
+                                <div className="flex-1 flex items-center justify-center pt-10 opacity-10">
+                                    <TrendingUp size={120} className="text-zinc-100" strokeWidth={0.5} />
                                 </div>
                             </div>
 
-                            <div className="pt-10 mt-10 border-t border-black/5">
-                                <div className="flex items-center gap-4">
-                                    <div className="flex-1">
-                                        <div className="h-1 bg-black/5 rounded-full mb-3">
-                                            <div className="h-full w-3/4 bg-obsidian rounded-full shadow-[0_0_10px_rgba(0,0,0,0.2)]"></div>
-                                        </div>
-                                        <p className="text-[10px] font-black text-obsidian/40 uppercase tracking-widest">Database Sync Progress</p>
+                            <div className="p-6 border-t border-white/5 bg-zinc-950/30">
+                                <div className="flex items-center justify-between">
+                                    <p className="text-xs font-semibold text-zinc-500 uppercase tracking-[0.2em]">Operational Status</p>
+                                    <div className="flex items-center gap-2">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                        <span className="text-xs text-emerald-500 font-bold uppercase">Optimal</span>
                                     </div>
-                                    <span className="font-black text-obsidian text-lg">75%</span>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="glass-panel rounded-[4rem] p-12 flex items-center gap-8 group cursor-pointer hover:bg-white/[0.05] transition-all">
-                            <div className="w-20 h-20 rounded-3xl bg-blue-500 shadow-[0_0_40px_rgba(59,130,246,0.3)] flex items-center justify-center transition-transform group-hover:rotate-12">
-                                <Clock size={32} className="text-white" />
-                            </div>
-                            <div>
-                                <p className="text-2xl font-black text-white tracking-tighter mb-1">Time Sheet</p>
-                                <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.3em] font-heading">Last Sync: 2m ago</p>
-                            </div>
-                        </div>
-                    </motion.div>
-                </div>
-            </div>
-
-            {/* Global Transitions & Visual Interest */}
-            <motion.div
-                className="fixed bottom-10 right-10 w-4 h-4 rounded-full bg-white shadow-[0_0_30px_white] pointer-events-none opacity-40 z-50 animate-pulse"
-                animate={{
-                    scale: [1, 1.5, 1],
-                    opacity: [0.4, 0.8, 0.4]
-                }}
-                transition={{ duration: 4, repeat: Infinity }}
-            ></motion.div>
+                    </div>
+                </motion.div>
+            )}
         </AppLayout>
     );
 }

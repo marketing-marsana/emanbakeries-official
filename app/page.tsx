@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
+import { uiSound } from '@/lib/ui-sounds';
 import {
   LayoutDashboard,
   Users,
@@ -188,31 +189,38 @@ export default function Home() {
     );
   }
 
-  // IF LOGGED OUT: SHOW PREMIUM MARKETING LANDING PAGE
+  // IF LOGGED OUT: SHOW GOOGLE RESEARCH-INSPIRED LANDING PAGE
   return (
-    <div className="min-h-screen bg-white text-slate-900 selection:bg-indigo-600 selection:text-white overflow-hidden font-sans">
-      {/* Nav */}
-      <nav className="fixed w-full top-0 h-24 bg-white/80 backdrop-blur-md z-[100] border-b border-slate-100 transition-all duration-500">
+    <div className="min-h-screen bg-black text-white selection:bg-blue-500/30 overflow-hidden font-sans relative">
+      {/* Animated Background Particles */}
+      <div className="fixed inset-0 -z-10 overflow-hidden">
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-600/20 rounded-full blur-[150px] animate-pulse"></div>
+        <div className="absolute top-1/3 right-1/4 w-[500px] h-[500px] bg-purple-600/15 rounded-full blur-[180px] animate-pulse" style={{ animationDelay: '2s' }}></div>
+        <div className="absolute bottom-0 left-1/3 w-[400px] h-[400px] bg-indigo-600/10 rounded-full blur-[160px] animate-pulse" style={{ animationDelay: '4s' }}></div>
+      </div>
+
+      {/* Nav - Pure Black Glassmorphism */}
+      <nav className="fixed w-full top-0 h-20 bg-black/70 backdrop-blur-2xl z-[100] border-b border-white/10 transition-all duration-500">
         <div className="max-w-7xl mx-auto px-6 h-full flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-600/20">
+            <div className="w-10 h-10 bg-gradient-to-tr from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/40">
               <span className="text-white font-bold text-xl">E</span>
             </div>
-            <h1 className="text-xl font-bold tracking-tight text-slate-900">
-              Eman Bakery <span className="text-indigo-600">360</span>
+            <h1 className="text-xl font-bold tracking-tight">
+              Eman Bakery <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">360</span>
             </h1>
           </div>
 
           <div className="hidden lg:flex items-center gap-10">
-            <a href="#features" className="text-sm font-bold text-slate-600 hover:text-indigo-600 transition-colors uppercase tracking-widest">Platform</a>
-            <a href="#compliance" className="text-sm font-bold text-slate-600 hover:text-indigo-600 transition-colors uppercase tracking-widest">Compliance</a>
-            <Link href="/login" className="px-8 py-3.5 bg-slate-900 hover:bg-indigo-600 text-white rounded-2xl text-sm font-bold transition-all shadow-xl shadow-indigo-600/10 active:scale-95 flex items-center gap-2">
+            <a href="#features" onMouseEnter={() => uiSound?.hover()} className="text-sm font-bold text-gray-400 hover:text-blue-400 transition-colors uppercase tracking-widest">Platform</a>
+            <a href="#features" onMouseEnter={() => uiSound?.hover()} className="text-sm font-bold text-gray-400 hover:text-blue-400 transition-colors uppercase tracking-widest">Technology</a>
+            <Link href="/login" onClick={() => uiSound?.click()} onMouseEnter={() => uiSound?.hover()} className="px-8 py-3.5 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white rounded-2xl text-sm font-bold transition-all shadow-lg shadow-blue-500/30 active:scale-95 flex items-center gap-2">
               Staff Login <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
 
           <button
-            className="lg:hidden p-3 bg-slate-100 rounded-xl text-slate-900 focus:ring-2 focus:ring-indigo-600 transition-all"
+            className="lg:hidden p-3 bg-white/5 backdrop-blur-md rounded-xl text-white focus:ring-2 focus:ring-blue-500 transition-all border border-white/10"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
             {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -222,81 +230,122 @@ export default function Home() {
 
       {/* Mobile Menu */}
       {mobileMenuOpen && (
-        <div className="fixed inset-0 bg-white z-[90] lg:hidden animate-fadeIn">
+        <div className="fixed inset-0 bg-black z-[90] lg:hidden animate-fadeIn">
           <div className="flex flex-col items-center justify-center h-full gap-8 p-6 text-center">
-            <Link href="/login" className="w-full py-5 bg-indigo-600 text-white rounded-3xl text-xl font-bold shadow-2xl">Login to Portal</Link>
+            <Link href="/login" className="w-full py-5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-3xl text-xl font-bold shadow-2xl shadow-blue-500/40">Login to Portal</Link>
           </div>
         </div>
       )}
 
-      {/* Hero Section */}
+      {/* Hero Section - Google Research Style */}
       <section className="relative pt-48 pb-32 overflow-hidden">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-screen-xl aspect-square bg-[#EEF2FF] rounded-full blur-[120px] -z-10 opacity-60"></div>
         <div className="max-w-7xl mx-auto px-6 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-600 text-xs font-extra-bold uppercase tracking-[0.2em] mb-8 animate-bounce">
-            <Star className="w-3 h-3 fill-indigo-600" /> New Era of HR
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold uppercase tracking-[0.2em] mb-8 backdrop-blur-md">
+            <Sparkles className="w-3 h-3" /> Enterprise HR System
           </div>
-          <h1 className="text-6xl md:text-8xl font-black text-slate-900 tracking-tighter mb-8 leading-[0.9] max-w-5xl mx-auto">
-            Elevate Every <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-700 via-indigo-600 to-indigo-500 underline decoration-indigo-600/30">Employee</span> Experience.
+          <h1 className="text-6xl md:text-8xl font-black tracking-tighter mb-8 leading-[0.9] max-w-5xl mx-auto">
+            Redefining <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 animate-gradient-shift">Workforce</span> Management
           </h1>
-          <p className="text-xl md:text-2xl text-slate-500 font-medium max-w-3xl mx-auto mb-12 leading-relaxed">
-            The definitive Next-Gen HR Operating System tailored for <br className="hidden md:block" /> **Eman Bakeries Group**. Seamless, compliant, and powerful.
+          <p className="text-xl md:text-2xl text-gray-400 font-medium max-w-3xl mx-auto mb-12 leading-relaxed">
+            Next-generation HR platform engineered for <span className="text-white font-bold">Eman Bakeries Group</span>. <br className="hidden md:block" />
+            Powered by real-time analytics, AI compliance, and advanced automation.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
-            <Link href="/login" className="px-12 py-6 bg-indigo-600 hover:bg-slate-900 text-white rounded-[2rem] text-lg font-black transition-all shadow-2xl shadow-indigo-600/30 flex items-center gap-3 active:scale-95 group">
-              Access Staff Portal <Zap className="w-6 h-6 fill-white group-hover:fill-indigo-400 transition-colors" />
+            <Link
+              href="/login"
+              onClick={() => uiSound?.click()}
+              onMouseEnter={() => uiSound?.hover()}
+              className="group px-12 py-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white rounded-[2rem] text-lg font-black transition-all shadow-[0_0_50px_rgba(59,130,246,0.5)] flex items-center gap-3 active:scale-95 relative overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
+              <span className="relative">Access Workspace</span>
+              <Zap className="w-6 h-6 fill-white relative" />
             </Link>
-            <div className="flex items-center gap-4 text-slate-400 font-bold group hover:text-slate-900 transition-colors">
-              <ShieldCheck className="w-6 h-6 text-emerald-500" /> Professional Grade Encryption
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Platform Feature Cards */}
-      <section id="features" className="py-32 bg-slate-50 relative">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 mb-20">
-            <div className="max-w-2xl">
-              <h2 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight leading-none mb-6">Built for Modern Bakeries.</h2>
-              <p className="text-xl text-slate-500 font-medium leading-relaxed">From payroll automation to Saudi Labor Law compliance, everything is integrated into one high-performance interface.</p>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-1 bg-indigo-600 rounded-full"></div>
+            <div className="flex items-center gap-4 text-gray-500 font-bold group hover:text-gray-300 transition-colors">
+              <ShieldCheck className="w-6 h-6 text-emerald-400" /> AES-256 Encryption
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+          {/* Floating Stats */}
+          <div className="grid grid-cols-3 gap-8 mt-24 max-w-3xl mx-auto">
             {[
-              { title: 'Digital Dossiers', desc: 'Every employee profile reimagined with advanced glassmorphic design and complete records.', icon: <Users className="w-8 h-8" /> },
-              { title: 'AI Compliance', desc: 'Predictive alerts for Iqama, Passport, and Visa expirations before they become critical.', icon: <ShieldAlert className="w-8 h-8" /> },
-              { title: 'WPS Payroll', desc: 'Automated salary files ready for Mudad and Saudi banking portals in a single click.', icon: <CreditCard className="w-8 h-8" /> }
-            ].map((card, i) => (
-              <div key={i} className="group bg-white p-12 rounded-[3.5rem] border border-slate-100 shadow-sm hover:shadow-2xl hover:shadow-indigo-600/10 hover:-translate-y-4 transition-all duration-500 cursor-default">
-                <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 mb-8 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-500">
-                  {card.icon}
-                </div>
-                <h3 className="text-2xl font-black text-slate-900 mb-4 tracking-tight">{card.title}</h3>
-                <p className="text-lg text-slate-500 font-medium leading-relaxed">{card.desc}</p>
+              { label: 'Active Users', value: '150+' },
+              { label: 'Uptime', value: '99.9%' },
+              { label: 'Modules', value: '5' }
+            ].map((stat, i) => (
+              <div key={i} className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-8 hover:bg-white/10 transition-all group">
+                <div className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 mb-2">{stat.value}</div>
+                <div className="text-sm text-gray-500 font-bold uppercase tracking-widest">{stat.label}</div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="py-20 border-t border-slate-100 bg-white">
-        <div className="max-w-7xl mx-auto px-6 flex flex-col items-center">
-          <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center mb-8">
-            <span className="text-slate-400 font-bold text-2xl">E</span>
+      {/* Platform Feature Cards - Dark Glassmorphism */}
+      <section id="features" className="py-32 relative">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 mb-20">
+            <div className="max-w-2xl">
+              <h2 className="text-5xl md:text-6xl font-black tracking-tight leading-none mb-6">
+                Built for <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">Excellence</span>
+              </h2>
+              <p className="text-xl text-gray-400 font-medium leading-relaxed">
+                From Saudi Labor Law compliance to WPS automation, every feature designed for operational perfection.
+              </p>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-1 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full shadow-lg shadow-blue-500/50"></div>
+            </div>
           </div>
-          <p className="text-slate-400 font-medium text-sm mb-4">© 2024 Eman Bakery 360. All privileges reserved.</p>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[
+              { title: 'Digital Profiles', desc: 'Complete employee dossiers with biometrics, documents, and real-time status tracking.', icon: <Users className="w-8 h-8" /> },
+              { title: 'Smart Compliance', desc: 'AI-powered alerts for Iqama, passport, and visa expirations with auto-notifications.', icon: <ShieldAlert className="w-8 h-8" /> },
+              { title: 'WPS Integration', desc: 'One-click salary file generation for Mudad and Saudi banking systems.', icon: <CreditCard className="w-8 h-8" /> }
+            ].map((card, i) => (
+              <div
+                key={i}
+                onMouseEnter={() => uiSound?.hover()}
+                className="group bg-white/5 backdrop-blur-md border border-white/10 p-10 rounded-[2.5rem] hover:bg-white/10 hover:border-blue-500/50 hover:shadow-[0_0_50px_rgba(59,130,246,0.3)] hover:-translate-y-2 transition-all duration-500 cursor-default relative overflow-hidden"
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 to-purple-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                <div className="w-16 h-16 bg-gradient-to-tr from-blue-500/20 to-purple-500/20 backdrop-blur-md rounded-2xl flex items-center justify-center text-blue-400 mb-8 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-blue-500/40 transition-all duration-500 relative z-10">
+                  {card.icon}
+                </div>
+                <h3 className="text-2xl font-black mb-4 tracking-tight relative z-10">{card.title}</h3>
+                <p className="text-lg text-gray-400 font-medium leading-relaxed relative z-10">{card.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Footer - Minimal Dark */}
+      <footer className="py-20 border-t border-white/10">
+        <div className="max-w-7xl mx-auto px-6 flex flex-col items-center">
+          <div className="w-14 h-14 bg-white/5 backdrop-blur-md rounded-2xl flex items-center justify-center mb-8 border border-white/10">
+            <span className="text-gray-400 font-bold text-2xl">E</span>
+          </div>
+          <p className="text-gray-500 font-medium text-sm mb-4">© 2024 Eman Bakery 360. Enterprise System.</p>
           <div className="flex gap-8">
-            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Privacy</span>
-            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Enterprise Support</span>
+            <span className="text-[10px] text-gray-600 font-bold uppercase tracking-widest hover:text-blue-400 transition-colors cursor-pointer">Security</span>
+            <span className="text-[10px] text-gray-600 font-bold uppercase tracking-widest hover:text-blue-400 transition-colors cursor-pointer">Support</span>
           </div>
         </div>
       </footer>
+
+      <style jsx>{`
+        @keyframes gradient-shift {
+          0%, 100% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+        }
+        .animate-gradient-shift {
+          background-size: 200% 200%;
+          animation: gradient-shift 8s ease infinite;
+        }
+      `}</style>
     </div>
   );
 }
