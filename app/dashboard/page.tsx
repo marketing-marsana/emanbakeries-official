@@ -1,216 +1,201 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
-import {
-    Users,
-    CreditCard,
-    ShieldAlert,
-    TrendingUp,
-    Calendar,
-    ArrowUpRight,
-    Search
-} from 'lucide-react';
-import { AppLayout } from '@/app/components/navigation/AppLayout';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect } from 'react';
+import { AppLayout } from '../components/navigation/AppLayout';
+import { Users, Briefcase, Calendar, Clock, ArrowRight, Zap, TrendingUp, Activity, ShieldCheck, Globe } from 'lucide-react';
+import { motion, useScroll, useSpring } from 'framer-motion';
 
-// Sample stats formatting
-const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-SA', {
-        style: 'currency',
-        currency: 'SAR',
-        maximumFractionDigits: 0
-    }).format(amount);
-};
-
-export default function DashboardPage() {
-    const [loading, setLoading] = useState(true);
+export default function Dashboard() {
+    // Component states for visual interest
     const [stats, setStats] = useState({
-        totalEmployees: 0,
-        totalPayroll: 0,
-        complianceAlerts: 3,
-        attendanceRate: 98
+        totalEmployees: 48,
+        activeLeaves: 5,
+        upcomingAnniversaries: 3,
+        systemEfficiency: '98.4%'
     });
 
-    useEffect(() => {
-        async function fetchStats() {
-            setLoading(true);
-            const { data } = await supabase.from('employees').select('salary');
-            if (data) {
-                const totalPayroll = data.reduce((sum, e) => sum + (e.salary || 0), 0);
-                setStats(prev => ({
-                    ...prev,
-                    totalEmployees: data.length,
-                    totalPayroll
-                }));
-            }
-            setLoading(false);
-        }
-        fetchStats();
-    }, []);
+    const metrics = [
+        { label: 'Workforce', value: stats.totalEmployees, icon: <Users size={28} />, detail: 'Active Personal', type: 'chrome' },
+        { label: 'Efficiency', value: stats.systemEfficiency, icon: <Zap size={28} />, detail: 'Operational Load', type: 'glass' },
+        { label: 'Incidents', value: '02', icon: <ShieldCheck size={28} />, detail: 'Security Level', type: 'chrome' },
+        { label: 'Global', value: '01', icon: <Globe size={28} />, detail: 'Network Nodes', type: 'glass' }
+    ];
 
-    const kpiCards = [
-        {
-            label: 'Total Workforce',
-            value: stats.totalEmployees,
-            sub: 'Active Staff',
-            icon: <Users className="text-blue-600" />,
-            color: 'bg-blue-50',
-            trend: '+2 this month'
-        },
-        {
-            label: 'Monthly Payroll',
-            value: formatCurrency(stats.totalPayroll),
-            sub: 'Total Liability',
-            icon: <CreditCard className="text-emerald-600" />,
-            color: 'bg-emerald-50',
-            trend: 'Stable'
-        },
-        {
-            label: 'Compliance',
-            value: stats.complianceAlerts,
-            sub: 'Pending Actions',
-            icon: <ShieldAlert className="text-rose-600" />,
-            color: 'bg-rose-50',
-            trend: 'Critical'
-        },
-        {
-            label: 'Attendance',
-            value: `${stats.attendanceRate}%`,
-            sub: 'Today Average',
-            icon: <Calendar className="text-amber-600" />,
-            color: 'bg-amber-50',
-            trend: 'Normal'
-        },
+    const activities = [
+        { title: 'Sector A14 Onboarding', time: '14:20:05', status: 'COMPLETE', sector: 'BAKERY HQ' },
+        { title: 'System Security Protocol', time: '13:45:12', status: 'ACTIVE', sector: 'NETWORK' },
+        { title: 'Leave Authorization IRQ-04', time: '11:12:00', status: 'PENDING', sector: 'S.V. DEPT' },
+        { title: 'Sector B02 Deployment', time: '09:30:45', status: 'COMPLETE', sector: 'LOGISTICS' },
     ];
 
     return (
         <AppLayout>
-            <div className="space-y-8 animate-in fade-in duration-700">
-                {/* Header Section */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">System Overview</h1>
-                        <p className="text-slate-500 font-medium">Real-time HR analytics for Eman Bakery</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <button className="flex-1 md:flex-none px-6 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-bold shadow-sm hover:bg-slate-50 transition-all active:scale-95">
-                            Export PDF
-                        </button>
-                        <button className="flex-1 md:flex-none px-6 py-3 bg-indigo-600 text-white rounded-2xl text-sm font-bold shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 transition-all active:scale-95">
-                            New Report
-                        </button>
-                    </div>
-                </div>
+            <div className="space-y-12 pb-20">
+                {/* Immersive Header Section */}
+                <header className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16 relative">
+                    <motion.div
+                        initial={{ opacity: 0, x: -30 }}
+                        animate={{ opacity: 1, x: 0 }}
+                    >
+                        <h2 className="text-[10px] font-black tracking-[0.6em] text-white/30 uppercase mb-4 flex items-center gap-3">
+                            <span className="w-8 h-[1px] bg-white/20"></span> CommandCenter
+                            <span className="px-2 py-0.5 bg-white/5 rounded-full text-[8px] animate-pulse">Live</span>
+                        </h2>
+                        <h1 className="text-5xl md:text-7xl font-black text-white tracking-tighter leading-none text-glow-md">
+                            METRIC <span className="text-white/20">MATRIX</span>
+                        </h1>
+                    </motion.div>
 
-                {/* KPI Grid: 1 col on mobile, 2 col sm, 4 col lg */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-                    {kpiCards.map((card, i) => (
+                    <motion.div
+                        initial={{ opacity: 0, x: 30 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="flex items-center gap-6"
+                    >
+                        <div className="text-right hidden sm:block">
+                            <p className="text-[10px] uppercase font-black tracking-widest text-white/20 leading-none mb-2">Sync Time</p>
+                            <p className="text-white font-black text-xl tracking-tighter">15 FEB 2026</p>
+                        </div>
+                        <button className="chrome-panel px-10 py-5 rounded-[2rem] text-obsidian font-black text-sm tracking-widest flex items-center gap-4 hover:scale-105 transition-all shadow-2xl active:scale-95 group">
+                            GENERATE REPORT <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                        </button>
+                    </motion.div>
+                </header>
+
+                {/* 3D Stat Grid - Inspired by the modular Moorgen panels */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-1 transform cursor-default group/grid">
+                    {metrics.map((m, i) => (
                         <motion.div
-                            key={card.label}
-                            initial={{ opacity: 0, y: 20 }}
+                            key={m.label}
+                            initial={{ opacity: 0, y: 30 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: i * 0.1 }}
-                            whileHover={{ y: -5 }}
-                            className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm transition-all group cursor-default"
+                            className={`relative h-[320px] p-10 flex flex-col justify-between overflow-hidden transition-all duration-700 hover:scale-[1.02] hover:z-20 ${m.type === 'chrome' ? 'chrome-panel rounded-[3rem]' : 'glass-panel rounded-[3rem]'
+                                }`}
                         >
-                            <div className="flex items-start justify-between mb-4">
-                                <div className={`w-12 h-12 ${card.color} rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                                    {card.icon}
+                            {/* Accent Gloss */}
+                            <div className="absolute top-0 left-0 right-0 h-1/2 bg-gradient-to-b from-white/10 to-transparent pointer-events-none" />
+
+                            <div className="flex justify-between items-start relative z-10">
+                                <div className={`p-4 rounded-2xl ${m.type === 'chrome' ? 'bg-obsidian text-white' : 'bg-white/10 text-white'}`}>
+                                    {m.icon}
                                 </div>
-                                <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-lg ${card.trend.includes('Critical') ? 'bg-rose-100 text-rose-600' : 'bg-slate-100 text-slate-500'
-                                    }`}>
-                                    {card.trend}
-                                </span>
+                                <Activity size={18} className={m.type === 'chrome' ? 'text-obsidian/20' : 'text-white/10'} />
                             </div>
-                            <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-1">{card.label}</p>
-                            <h3 className="text-2xl md:text-3xl font-black text-slate-900 mb-1 leading-none">{loading ? '...' : card.value}</h3>
-                            <p className="text-xs font-bold text-slate-500">{card.sub}</p>
+
+                            <div className="relative z-10">
+                                <p className={`text-[10px] font-black uppercase tracking-[0.4em] mb-3 ${m.type === 'chrome' ? 'text-obsidian/40' : 'text-white/30'}`}>
+                                    {m.label}
+                                </p>
+                                <p className={`text-6xl font-black tracking-tighter mb-1 ${m.type === 'chrome' ? 'text-obsidian' : 'text-white text-glow-sm'}`}>
+                                    {m.value}
+                                </p>
+                                <p className={`text-[9px] font-black uppercase tracking-widest ${m.type === 'chrome' ? 'text-obsidian/30' : 'text-white/20'}`}>
+                                    {m.detail}
+                                </p>
+                            </div>
+
+                            {/* Decorative 3D Groove Elements */}
+                            <div className={`absolute bottom-6 right-6 w-12 h-1 ${m.type === 'chrome' ? 'bg-obsidian/10' : 'bg-white/10'} rounded-full`} />
                         </motion.div>
                     ))}
                 </div>
 
-                {/* Main Content Grid: 1 col on mobile, 3 col desktop */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Activity Feed / Main Section */}
-                    <div className="lg:col-span-2 space-y-6">
-                        <div className="bg-white rounded-[2.5rem] border border-slate-200 p-8 shadow-sm">
-                            <div className="flex items-center justify-between mb-8">
-                                <h2 className="text-xl font-black text-slate-900">Recent Employee Onboarding</h2>
-                                <button className="text-xs font-bold text-indigo-600 hover:underline">View All Staff</button>
+                {/* Large Modular Panels Section */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 mt-20">
+                    {/* Activity Feed - The Dark Obsidian "Hub" */}
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="lg:col-span-12 xl:col-span-8 glass-panel rounded-[4rem] p-12 relative overflow-hidden group"
+                    >
+                        <div className="flex items-center justify-between mb-12">
+                            <div>
+                                <h3 className="text-3xl font-black tracking-tighter mb-2">SYSTEM ACTIVITY</h3>
+                                <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.4em]">Real-time operational streams</p>
                             </div>
-
-                            {/* Mobile-friendly list that becomes cards or stays as clean rows */}
-                            <div className="space-y-4">
-                                {[1, 2, 3].map((_, i) => (
-                                    <div key={i} className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer group">
-                                        <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center font-bold text-indigo-600 shadow-sm">
-                                            {String.fromCharCode(65 + i)}
-                                        </div>
-                                        <div className="flex-1">
-                                            <p className="text-sm font-bold text-slate-900">New Staff Member #{i + 1}</p>
-                                            <p className="text-xs text-slate-500 font-medium tracking-tight">Department: Production Line · Joined Today</p>
-                                        </div>
-                                        <ArrowUpRight className="text-slate-300 group-hover:text-indigo-600 transition-colors" size={20} />
-                                    </div>
-                                ))}
-                            </div>
+                            <button className="w-14 h-14 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-center hover:bg-white/10 transition-all">
+                                <TrendingUp size={24} className="text-white/60" />
+                            </button>
                         </div>
 
-                        {/* Mobile Spotlight Card */}
-                        <div className="md:hidden bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-xl shadow-indigo-600/20">
-                            <div className="relative z-10">
-                                <span className="inline-block px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-[10px] font-black uppercase tracking-widest mb-4">Mobile Quick Action</span>
-                                <h3 className="text-2xl font-black mb-2 leading-none">Complete Payroll Confirmation</h3>
-                                <p className="text-indigo-100 text-sm font-medium mb-6 opacity-80">Cycle Feb 2024 is ready for final verification according to Mudad specifications.</p>
-                                <button className="w-full py-4 bg-white text-indigo-700 rounded-2xl font-black text-sm shadow-xl active:scale-95 transition-all">Proceed to Mudad</button>
-                            </div>
-                            <TrendingUp className="absolute bottom-[-10%] right-[-10%] w-40 h-40 text-white/10 -rotate-12" />
-                        </div>
-                    </div>
-
-                    {/* Right Rails / Sidebar info */}
-                    <div className="space-y-6">
-                        <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white shadow-xl shadow-slate-900/20">
-                            <h2 className="text-lg font-black mb-6">Compliance Status</h2>
-                            <div className="space-y-6">
-                                {['Iqama Renewal', 'Exit/Re-entry', 'GOSI Settlement'].map((task, i) => (
-                                    <div key={i} className="flex flex-col gap-2">
-                                        <div className="flex justify-between text-xs font-bold uppercase tracking-widest">
-                                            <span className="text-slate-400">{task}</span>
-                                            <span className="text-indigo-400">{85 - (i * 15)}%</span>
-                                        </div>
-                                        <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
-                                            <motion.div
-                                                initial={{ width: 0 }}
-                                                animate={{ width: `${85 - (i * 15)}%` }}
-                                                transition={{ duration: 1, delay: i * 0.2 }}
-                                                className="h-full bg-indigo-500 rounded-full"
-                                            />
+                        <div className="space-y-6">
+                            {activities.map((act, i) => (
+                                <motion.div
+                                    key={i}
+                                    whileHover={{ x: 10 }}
+                                    className="flex items-center justify-between p-7 rounded-[2.5rem] bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] transition-all cursor-crosshair group/item"
+                                >
+                                    <div className="flex items-center gap-8">
+                                        <div className="text-[10px] font-mono text-white/40 tracking-wider">[{act.time}]</div>
+                                        <div>
+                                            <p className="font-black text-lg tracking-tight mb-1 group-hover/item:text-glow-sm transition-all">{act.title}</p>
+                                            <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.3em] font-heading">{act.sector}</p>
                                         </div>
                                     </div>
-                                ))}
-                            </div>
-                            <button className="w-full mt-8 py-4 border border-slate-700 rounded-2xl text-xs font-bold uppercase tracking-[0.2em] hover:bg-slate-800 transition-colors">Generate Compliance Audit</button>
-                        </div>
-
-                        <div className="bg-white rounded-[2.5rem] border border-slate-200 p-8 shadow-sm">
-                            <h2 className="text-lg font-black text-slate-900 mb-6">Upcoming Holidays</h2>
-                            <p className="text-sm font-medium text-slate-500 leading-relaxed mb-6">Next official gazetted holiday is **National Day** in 12 days.</p>
-                            <div className="flex -space-x-3">
-                                {[1, 2, 3, 4].map(i => (
-                                    <div key={i} className="w-10 h-10 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center font-bold text-[10px] text-slate-400">
-                                        U{i}
+                                    <div className={`px-4 py-2 rounded-xl text-[9px] font-black tracking-widest border ${act.status === 'COMPLETE'
+                                            ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                                            : 'bg-amber-500/10 text-amber-500 border-amber-500/20 animate-pulse'
+                                        }`}>
+                                        {act.status}
                                     </div>
-                                ))}
-                                <div className="w-10 h-10 rounded-full border-2 border-white bg-indigo-600 flex items-center justify-center font-black text-[10px] text-white">
-                                    +12
+                                </motion.div>
+                            ))}
+                        </div>
+                    </motion.div>
+
+                    {/* Side Info Panel - Metallic Accents */}
+                    <motion.div
+                        initial={{ opacity: 0, x: 50 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="lg:col-span-12 xl:col-span-4 space-y-8"
+                    >
+                        <div className="chrome-panel rounded-[4rem] p-12 flex flex-col justify-between min-h-[450px]">
+                            <div>
+                                <p className="text-[10px] font-black text-obsidian/30 uppercase tracking-[0.4em] mb-8">Quick Protocols</p>
+                                <div className="space-y-4">
+                                    {['System Restart', 'Security Audit', 'Manual Override'].map((text) => (
+                                        <button key={text} className="w-full py-5 px-8 rounded-2xl bg-obsidian text-white font-black text-xs tracking-widest hover:scale-[1.03] active:scale-95 transition-all text-left flex items-center justify-between group">
+                                            {text.toUpperCase()} <ArrowRight size={14} className="opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="pt-10 mt-10 border-t border-black/5">
+                                <div className="flex items-center gap-4">
+                                    <div className="flex-1">
+                                        <div className="h-1 bg-black/5 rounded-full mb-3">
+                                            <div className="h-full w-3/4 bg-obsidian rounded-full shadow-[0_0_10px_rgba(0,0,0,0.2)]"></div>
+                                        </div>
+                                        <p className="text-[10px] font-black text-obsidian/40 uppercase tracking-widest">Database Sync Progress</p>
+                                    </div>
+                                    <span className="font-black text-obsidian text-lg">75%</span>
                                 </div>
                             </div>
                         </div>
-                    </div>
+
+                        <div className="glass-panel rounded-[4rem] p-12 flex items-center gap-8 group cursor-pointer hover:bg-white/[0.05] transition-all">
+                            <div className="w-20 h-20 rounded-3xl bg-blue-500 shadow-[0_0_40px_rgba(59,130,246,0.3)] flex items-center justify-center transition-transform group-hover:rotate-12">
+                                <Clock size={32} className="text-white" />
+                            </div>
+                            <div>
+                                <p className="text-2xl font-black text-white tracking-tighter mb-1">Time Sheet</p>
+                                <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.3em] font-heading">Last Sync: 2m ago</p>
+                            </div>
+                        </div>
+                    </motion.div>
                 </div>
             </div>
+
+            {/* Global Transitions & Visual Interest */}
+            <motion.div
+                className="fixed bottom-10 right-10 w-4 h-4 rounded-full bg-white shadow-[0_0_30px_white] pointer-events-none opacity-40 z-50 animate-pulse"
+                animate={{
+                    scale: [1, 1.5, 1],
+                    opacity: [0.4, 0.8, 0.4]
+                }}
+                transition={{ duration: 4, repeat: Infinity }}
+            ></motion.div>
         </AppLayout>
     );
 }
