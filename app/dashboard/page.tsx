@@ -15,7 +15,6 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
-import { format } from 'date-fns';
 
 export default function Dashboard() {
     const [loading, setLoading] = useState(true);
@@ -79,7 +78,13 @@ export default function Dashboard() {
                     id: leave.id,
                     title: `${leave.employees?.full_name_en || 'Staff'} submitted ${leave.leave_type} leave`,
                     detail: `Status: ${leave.status}`,
-                    time: format(new Date(leave.created_at), 'MMM d, h:mm a'),
+                    time: new Date(leave.created_at).toLocaleString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true
+                    }),
                     type: leave.status === 'Approved' ? 'success' : leave.status === 'Rejected' ? 'error' : 'warning'
                 })));
             }
@@ -233,8 +238,8 @@ export default function Dashboard() {
                                     <div key={activity.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-6 hover:bg-white/[0.02] transition-colors group">
                                         <div className="flex items-start gap-4">
                                             <div className={`mt-1.5 w-2 h-2 rounded-full shadow-[0_0_8px] ${activity.type === 'success' ? 'bg-emerald-500 shadow-emerald-500/80' :
-                                                    activity.type === 'error' ? 'bg-rose-500 shadow-rose-500/80' :
-                                                        'bg-amber-500 shadow-amber-500/80'
+                                                activity.type === 'error' ? 'bg-rose-500 shadow-rose-500/80' :
+                                                    'bg-amber-500 shadow-amber-500/80'
                                                 }`}></div>
                                             <div>
                                                 <p className="text-base text-zinc-200 group-hover:text-white transition-colors font-medium">{activity.title}</p>
