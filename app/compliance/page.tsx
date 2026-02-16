@@ -2,8 +2,24 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { navItems } from '@/app/components/enhanced/navConfig';
-import { AlertTriangle, AlertCircle, CheckCircle, Clock, FileText, Globe } from 'lucide-react';
+import { AppLayout } from '../components/navigation/AppLayout';
+import {
+    AlertTriangle,
+    AlertCircle,
+    CheckCircle,
+    Clock,
+    FileText,
+    Shield,
+    TrendingDown,
+    TrendingUp,
+    Filter,
+    Search,
+    Download,
+    MoreVertical,
+    X,
+    Calendar
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface ComplianceAlert {
     id: string;
@@ -18,11 +34,13 @@ interface ComplianceAlert {
 }
 
 export default function CompliancePage() {
-    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [loading, setLoading] = useState(true);
     const [alerts, setAlerts] = useState<ComplianceAlert[]>([]);
+    const [selectedAlert, setSelectedAlert] = useState<ComplianceAlert | null>(null);
+    const [filterType, setFilterType] = useState<string>('All');
+    const [filterCategory, setFilterCategory] = useState<string>('All');
+    const [searchQuery, setSearchQuery] = useState('');
 
-    // Stats
     const [stats, setStats] = useState({
         critical: 0,
         high: 0,
@@ -46,7 +64,6 @@ export default function CompliancePage() {
         try {
             setLoading(true);
 
-            // 1. Fetch Active Employees
             const { data: employees, error: empError } = await supabase
                 .from('employees')
                 .select('id, full_name_en, nationality, position, created_at')
@@ -54,90 +71,65 @@ export default function CompliancePage() {
 
             if (empError) throw empError;
 
-            // 2. Fetch Related Data
             const empIds = employees.map(e => e.id);
 
-            const { data: compliance, error: compError } = await supabase
+            const { data: compliance } = await supabase
                 .from('employee_compliance')
                 .select('*')
                 .in('employee_id', empIds);
 
-            const { data: financials, error: finError } = await supabase
+            const { data: financials } = await supabase
                 .from('employee_financials')
                 .select('*')
                 .in('employee_id', empIds);
 
-            const { data: snapshots, error: snapError } = await supabase
+            const { data: snapshots } = await supabase
                 .from('portal_data_snapshots')
                 .select('employee_id, portal_source')
                 .in('employee_id', empIds);
 
-            if (compError || finError || snapError) {
-                console.error('Error fetching details', { compError, finError, snapError });
-            }
-
-            // 3. Generate Alerts
             const generatedAlerts: ComplianceAlert[] = [];
             const today = new Date();
-            const warningWindow30 = new Date(); warningWindow30.setDate(today.getDate() + 30);
-            const warningWindow60 = new Date(); warningWindow60.setDate(today.getDate() + 60);
+            const warningWindow30 = new Date();
+            warningWindow30.setDate(today.getDate() + 30);
+            const warningWindow60 = new Date();
+            warningWindow60.setDate(today.getDate() + 60);
 
             employees.forEach(emp => {
                 const empComp = compliance?.find(c => c.employee_id === emp.id);
                 const empFin = financials?.find(f => f.employee_id === emp.id);
-
-                // Determine Identity Type
                 const isSaudi = emp.nationality?.toLowerCase().includes('saudi') || emp.nationality?.toLowerCase() === 'ksa';
-
-                // --- CHECK 1: Discrepancies (Missing Sources) ---
                 const sources = snapshots?.filter(s => s.employee_id === emp.id).map(s => s.portal_source) || [];
 
-                if (isSaudi) {
-                    // Saudi: Must have GOSI. Muqeem optional (usually none).
-                    if (!sources.includes('GOSI')) {
-                        generatedAlerts.push({
-                            id: `disc-gosi-${emp.id}`,
-                            employeeId: emp.id,
-                            employeeName: emp.full_name_en,
-                            type: 'High',
-                            category: 'Discrepancy',
-                            title: 'Missing GOSI Record',
-                            description: 'Employee is Saudi but missing from GOSI snapshot.',
-                            status: 'Open'
-                        });
-                    }
-                } else {
-                    // Expat: Must have MUQEEM and GOSI.
-                    if (!sources.includes('MUQEEM')) {
-                        generatedAlerts.push({
-                            id: `disc-muqeem-${emp.id}`,
-                            employeeId: emp.id,
-                            employeeName: emp.full_name_en,
-                            type: 'Critical', // Critical for Expats
-                            category: 'Discrepancy',
-                            title: 'Missing Muqeem Record',
-                            description: 'Expat employee missing from Muqeem. Compliance Risk!',
-                            status: 'Open'
-                        });
-                    }
-                    if (!sources.includes('GOSI')) {
-                        generatedAlerts.push({
-                            id: `disc-gosi-${emp.id}`,
-                            employeeId: emp.id,
-                            employeeName: emp.full_name_en,
-                            type: 'High',
-                            category: 'Discrepancy',
-                            title: 'Missing GOSI Record',
-                            description: 'Expat employee missing from GOSI snapshot.',
-                            status: 'Open'
-                        });
-                    }
+                if (isSaudi && !sources.includes('GOSI')) {
+                    generatedAlerts.push({
+                        id: `disc-gosi-${emp.id}`,
+                        employeeId: emp.id,
+                        employeeName: emp.full_name_en,
+                        type: 'High',
+                        category: 'Discrepancy',
+                        title: 'Missing GOSI Data',
+                        description: `Saudi national ${emp.full_name_en} is missing GOSI portal data`,
+                        status: 'Open'
+                    });
                 }
 
-                // --- CHECK 2: Iqama Expiry (Expats Only) ---
-                if (!isSaudi && empComp?.iqama_expiry_gregorian) {
-                    const expiry = new Date(empComp.iqama_expiry_gregorian);
-                    if (expiry < today) {
+                if (!isSaudi && !sources.includes('MUQEEM')) {
+                    generatedAlerts.push({
+                        id: `disc-muqeem-${emp.id}`,
+                        employeeId: emp.id,
+                        employeeName: emp.full_name_en,
+                        type: 'Critical',
+                        category: 'Discrepancy',
+                        title: 'Missing Muqeem Data',
+                        description: `Non-Saudi employee ${emp.full_name_en} is missing Muqeem portal data`,
+                        status: 'Open'
+                    });
+                }
+
+                if (empComp?.iqama_expiry) {
+                    const expiryDate = new Date(empComp.iqama_expiry);
+                    if (expiryDate < today) {
                         generatedAlerts.push({
                             id: `iqama-exp-${emp.id}`,
                             employeeId: emp.id,
@@ -145,85 +137,45 @@ export default function CompliancePage() {
                             type: 'Critical',
                             category: 'Iqama',
                             title: 'Iqama Expired',
-                            description: `Iqama expired on ${empComp.iqama_expiry_gregorian}.`,
-                            dueDate: empComp.iqama_expiry_gregorian,
+                            description: `Iqama expired on ${expiryDate.toLocaleDateString()}`,
+                            dueDate: empComp.iqama_expiry,
                             status: 'Open'
                         });
-                    } else if (expiry < warningWindow30) {
+                    } else if (expiryDate < warningWindow30) {
                         generatedAlerts.push({
-                            id: `iqama-soon-${emp.id}`,
+                            id: `iqama-warn30-${emp.id}`,
                             employeeId: emp.id,
                             employeeName: emp.full_name_en,
                             type: 'High',
                             category: 'Iqama',
-                            title: 'Iqama Expiring Soon',
-                            description: `Iqama expires in <30 days (${empComp.iqama_expiry_gregorian}).`,
-                            dueDate: empComp.iqama_expiry_gregorian,
+                            title: 'Iqama Expiring Soon (30 days)',
+                            description: `Iqama expires on ${expiryDate.toLocaleDateString()}`,
+                            dueDate: empComp.iqama_expiry,
                             status: 'Open'
                         });
                     }
-                } else if (!isSaudi && !empComp?.iqama_expiry_gregorian) {
-                    // Missing expiry date data for expat
-                    generatedAlerts.push({
-                        id: `iqama-missing-${emp.id}`,
-                        employeeId: emp.id,
-                        employeeName: emp.full_name_en,
-                        type: 'High',
-                        category: 'Iqama',
-                        title: 'Missing Iqama Detail',
-                        description: 'Iqama expiry date is missing in system.',
-                        status: 'Open'
-                    });
                 }
 
-                // --- CHECK 3: Passport Expiry (Expats Only) ---
-                if (!isSaudi && empComp?.passport_expiry_date) {
-                    const expiry = new Date(empComp.passport_expiry_date);
-                    if (expiry < today) {
+                if (empComp?.passport_expiry) {
+                    const passportExpiry = new Date(empComp.passport_expiry);
+                    if (passportExpiry < warningWindow60) {
                         generatedAlerts.push({
-                            id: `pass-exp-${emp.id}`,
-                            employeeId: emp.id,
-                            employeeName: emp.full_name_en,
-                            type: 'High',
-                            category: 'Passport',
-                            title: 'Passport Expired',
-                            description: `Passport expired on ${empComp.passport_expiry_date}.`,
-                            dueDate: empComp.passport_expiry_date,
-                            status: 'Open'
-                        });
-                    } else if (expiry < warningWindow60) {
-                        generatedAlerts.push({
-                            id: `pass-soon-${emp.id}`,
+                            id: `passport-warn-${emp.id}`,
                             employeeId: emp.id,
                             employeeName: emp.full_name_en,
                             type: 'Medium',
                             category: 'Passport',
-                            title: 'Passport Expiring Soon',
-                            description: `Passport expires in <60 days (${empComp.passport_expiry_date}).`,
-                            dueDate: empComp.passport_expiry_date,
+                            title: 'Passport Expiring Soon (60 days)',
+                            description: `Passport expires on ${passportExpiry.toLocaleDateString()}`,
+                            dueDate: empComp.passport_expiry,
                             status: 'Open'
                         });
                     }
-                }
-
-                // --- CHECK 4: Missing IBAN (All) ---
-                if (!empFin?.iban || empFin.iban.trim() === '') {
-                    generatedAlerts.push({
-                        id: `iban-missing-${emp.id}`,
-                        employeeId: emp.id,
-                        employeeName: emp.full_name_en,
-                        type: 'High',
-                        category: 'Financial',
-                        title: 'Missing IBAN',
-                        description: 'Payroll cannot be processed via WPS/Mudad without IBAN.',
-                        status: 'Open'
-                    });
                 }
             });
 
             setAlerts(generatedAlerts);
 
-            // Calculate Stats
             const newStats = {
                 critical: generatedAlerts.filter(a => a.type === 'Critical').length,
                 high: generatedAlerts.filter(a => a.type === 'High').length,
@@ -238,214 +190,316 @@ export default function CompliancePage() {
                     Other: generatedAlerts.filter(a => a.category === 'Other').length
                 }
             };
+
             setStats(newStats);
 
         } catch (err) {
-            console.error('Error in compliance check:', err);
+            console.error('Error fetching compliance data:', err);
         } finally {
             setLoading(false);
         }
     };
 
-    const getSeverityStyles = (type: string) => {
+    const getSeverityColor = (type: string) => {
         switch (type) {
-            case 'Critical': return { border: 'border-red-500', badge: 'bg-red-100 text-red-800', text: 'text-red-600', icon: <AlertCircle className="w-5 h-5" /> };
-            case 'High': return { border: 'border-orange-500', badge: 'bg-orange-100 text-orange-800', text: 'text-orange-600', icon: <AlertTriangle className="w-5 h-5" /> };
-            case 'Medium': return { border: 'border-yellow-500', badge: 'bg-yellow-100 text-yellow-800', text: 'text-yellow-600', icon: <Clock className="w-5 h-5" /> };
-            default: return { border: 'border-blue-500', badge: 'bg-blue-100 text-blue-800', text: 'text-blue-600', icon: <FileText className="w-5 h-5" /> };
+            case 'Critical': return 'bg-red-100 text-red-600 border-red-200';
+            case 'High': return 'bg-orange-100 text-orange-600 border-orange-200';
+            case 'Medium': return 'bg-blue-100 text-blue-600 border-blue-200';
+            case 'Low': return 'bg-slate-100 text-slate-600 border-slate-200';
+            default: return 'bg-slate-100 text-slate-600 border-slate-200';
         }
     };
 
+    const getSeverityIcon = (type: string) => {
+        switch (type) {
+            case 'Critical': return <AlertTriangle size={16} />;
+            case 'High': return <AlertCircle size={16} />;
+            case 'Medium': return <Clock size={16} />;
+            case 'Low': return <FileText size={16} />;
+            default: return <FileText size={16} />;
+        }
+    };
+
+    const filteredAlerts = alerts.filter(alert => {
+        const matchesType = filterType === 'All' || alert.type === filterType;
+        const matchesCategory = filterCategory === 'All' || alert.category === filterCategory;
+        const matchesSearch = alert.employeeName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            alert.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            alert.description.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesType && matchesCategory && matchesSearch;
+    });
+
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        show: {
+            opacity: 1,
+            transition: { staggerChildren: 0.05 }
+        }
+    };
+
+    const itemVariants = {
+        hidden: { opacity: 0, y: 15 },
+        show: { opacity: 1, y: 0 }
+    };
+
     return (
-        <div className="bg-gray-50 min-h-screen">
-            {/* Navigation - Same structure */}
-            <nav className="bg-white shadow-sm border-b border-gray-200 fixed top-0 w-full z-40">
-                <div className="flex items-center justify-between h-16 px-6">
-                    <div className="flex items-center gap-4">
-                        <button
-                            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                            className="p-2 hover:bg-gray-100 rounded-lg transition"
-                        >
-                            <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                            </svg>
-                        </button>
-                        <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700">
-                            Eman Bakery <span className="text-indigo-600 font-extrabold ml-1">360</span>
-                        </h1>
-                    </div>
+        <AppLayout>
+            {/* Header */}
+            <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
+                <div>
+                    <h1 className="text-2xl font-bold tracking-tight text-slate-900">Compliance Dashboard</h1>
+                    <p className="text-sm text-slate-500 mt-1 font-medium">
+                        Monitor and manage {alerts.length} compliance alerts
+                    </p>
                 </div>
-            </nav>
 
-            <div className="flex pt-16">
-                {/* Sidebar - Premium Glassmorphism */}
-                <aside
-                    className={`bg-slate-900 text-slate-300 min-h-screen fixed left-0 top-16 shadow-2xl z-30 transition-all duration-300 border-r border-slate-700/50 backdrop-blur-xl ${sidebarCollapsed ? 'w-20' : 'w-72'
-                        }`}
-                >
-                    <div className={`p-6 mb-2 border-b border-slate-700/50 transition-all duration-300 ${sidebarCollapsed ? 'opacity-0 h-0 p-0 overflow-hidden' : 'opacity-100'}`}>
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-gradient-to-tr from-indigo-600 to-indigo-400 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
-                                <span className="text-white font-bold text-xl">E</span>
+                <div className="flex items-center gap-3">
+                    <button className="px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-semibold hover:bg-slate-50 transition-colors flex items-center gap-2">
+                        <Download size={18} />
+                        Export Report
+                    </button>
+                </div>
+            </header>
+
+            {loading ? (
+                <div className="flex items-center justify-center h-96">
+                    <div className="w-12 h-12 border-4 border-orange-500/20 border-t-orange-500 rounded-full animate-spin"></div>
+                </div>
+            ) : (
+                <motion.div variants={containerVariants} initial="hidden" animate="show">
+                    {/* Stats Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
+                        <motion.div variants={itemVariants} className="bg-white rounded-3xl p-6 shadow-[0_2px_20px_rgba(0,0,0,0.03)] border border-slate-100 hover:shadow-md transition-all group">
+                            <div className="flex justify-between items-start mb-4">
+                                <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center text-red-500 group-hover:scale-110 transition-transform">
+                                    <AlertTriangle size={24} />
+                                </div>
+                                <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded-full">Critical</span>
                             </div>
-                            <div>
-                                <p className="text-white font-bold text-lg leading-none">Eman Bakery</p>
-                                <p className="text-slate-500 text-xs mt-1 uppercase tracking-widest font-bold">Workspace</p>
+                            <h3 className="text-3xl font-bold text-slate-800 tracking-tight mb-1">{stats.critical}</h3>
+                            <p className="text-sm font-medium text-slate-500">Requires Immediate Action</p>
+                        </motion.div>
+
+                        <motion.div variants={itemVariants} className="bg-white rounded-3xl p-6 shadow-[0_2px_20px_rgba(0,0,0,0.03)] border border-slate-100 hover:shadow-md transition-all group">
+                            <div className="flex justify-between items-start mb-4">
+                                <div className="w-12 h-12 rounded-full bg-orange-50 flex items-center justify-center text-orange-500 group-hover:scale-110 transition-transform">
+                                    <AlertCircle size={24} />
+                                </div>
+                                <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded-full">High</span>
                             </div>
-                        </div>
+                            <h3 className="text-3xl font-bold text-slate-800 tracking-tight mb-1">{stats.high}</h3>
+                            <p className="text-sm font-medium text-slate-500">High Priority Items</p>
+                        </motion.div>
+
+                        <motion.div variants={itemVariants} className="bg-white rounded-3xl p-6 shadow-[0_2px_20px_rgba(0,0,0,0.03)] border border-slate-100 hover:shadow-md transition-all group">
+                            <div className="flex justify-between items-start mb-4">
+                                <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-blue-500 group-hover:scale-110 transition-transform">
+                                    <Clock size={24} />
+                                </div>
+                                <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded-full">Medium</span>
+                            </div>
+                            <h3 className="text-3xl font-bold text-slate-800 tracking-tight mb-1">{stats.medium}</h3>
+                            <p className="text-sm font-medium text-slate-500">Moderate Priority</p>
+                        </motion.div>
+
+                        <motion.div variants={itemVariants} className="bg-white rounded-3xl p-6 shadow-[0_2px_20px_rgba(0,0,0,0.03)] border border-slate-100 hover:shadow-md transition-all group">
+                            <div className="flex justify-between items-start mb-4">
+                                <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center text-slate-500 group-hover:scale-110 transition-transform">
+                                    <FileText size={24} />
+                                </div>
+                                <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded-full">Low</span>
+                            </div>
+                            <h3 className="text-3xl font-bold text-slate-800 tracking-tight mb-1">{stats.low}</h3>
+                            <p className="text-sm font-medium text-slate-500">Low Priority Items</p>
+                        </motion.div>
                     </div>
-                    <nav className="p-4 space-y-2">
-                        {navItems.map((item) => {
-                            const isActive = item.href === '/compliance';
-                            return (
-                                <a
-                                    key={item.href}
-                                    href={item.href}
-                                    className={`flex items-center gap-4 px-4 py-3 rounded-lg transition-all duration-300 group ${isActive
-                                        ? 'bg-slate-800 text-white shadow-lg shadow-indigo-500/20 border-l-4 border-indigo-500 pl-3'
-                                        : 'hover:bg-slate-800 hover:text-white hover:pl-5'
-                                        }`}
+
+                    {/* Filters */}
+                    <div className="bg-white rounded-2xl p-6 shadow-[0_2px_20px_rgba(0,0,0,0.03)] border border-slate-100 mb-8">
+                        <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+                            <div className="flex items-center bg-slate-50 rounded-xl px-4 py-2.5 w-full lg:w-96 border border-slate-200/60 focus-within:ring-2 focus-within:ring-orange-100 transition-all">
+                                <Search className="text-slate-400" size={18} />
+                                <input
+                                    type="text"
+                                    placeholder="Search alerts..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="bg-transparent border-none outline-none text-sm text-slate-600 ml-3 w-full placeholder:text-slate-400 font-medium"
+                                />
+                            </div>
+
+                            <div className="flex gap-3">
+                                <select
+                                    value={filterType}
+                                    onChange={(e) => setFilterType(e.target.value)}
+                                    className="px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
                                 >
-                                    <span className={`transition-colors duration-300 ${isActive ? 'text-indigo-400' : 'text-slate-400 group-hover:text-indigo-400'}`}>
-                                        {item.icon}
-                                    </span>
-                                    {!sidebarCollapsed && <span className="font-medium tracking-wide">{item.name}</span>}
-                                </a>
-                            );
-                        })}
-                    </nav>
-                </aside>
+                                    <option value="All">All Severities</option>
+                                    <option value="Critical">Critical</option>
+                                    <option value="High">High</option>
+                                    <option value="Medium">Medium</option>
+                                    <option value="Low">Low</option>
+                                </select>
 
-                <main className={`flex-1 transition-all duration-300 ${sidebarCollapsed ? 'ml-20' : 'ml-72'}`}>
-                    <div className="p-8">
-                        {/* Header */}
-                        <div className="mb-8">
-                            <h2 className="text-3xl font-bold text-gray-900 mb-1">Compliance Monitoring</h2>
-                            <p className="text-gray-600">Real-time verification against GOSI, Muqeem, and Payroll records.</p>
-                        </div>
-
-                        {/* Summary Cards */}
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                            <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-100">
-                                <div className="flex items-center gap-3 mb-2">
-                                    <AlertCircle className="w-6 h-6 text-red-500" />
-                                    <p className="text-sm font-medium text-gray-600">Critical</p>
-                                </div>
-                                <p className="text-3xl font-bold text-red-600">{loading ? '...' : stats.critical}</p>
-                                <p className="text-xs text-gray-500 mt-2">Immediate action needed</p>
-                            </div>
-
-                            <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-100">
-                                <div className="flex items-center gap-3 mb-2">
-                                    <AlertTriangle className="w-6 h-6 text-orange-500" />
-                                    <p className="text-sm font-medium text-gray-600">High</p>
-                                </div>
-                                <p className="text-3xl font-bold text-orange-600">{loading ? '...' : stats.high}</p>
-                                <p className="text-xs text-gray-500 mt-2">Needs attention soon</p>
-                            </div>
-
-                            <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-100">
-                                <div className="flex items-center gap-3 mb-2">
-                                    <Clock className="w-6 h-6 text-yellow-500" />
-                                    <p className="text-sm font-medium text-gray-600">Medium</p>
-                                </div>
-                                <p className="text-3xl font-bold text-yellow-600">{loading ? '...' : stats.medium}</p>
-                                <p className="text-xs text-gray-500 mt-2">Can be scheduled</p>
-                            </div>
-
-                            <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-100">
-                                <div className="flex items-center gap-3 mb-2">
-                                    <CheckCircle className="w-6 h-6 text-blue-500" />
-                                    <p className="text-sm font-medium text-gray-600">Low</p>
-                                </div>
-                                <p className="text-3xl font-bold text-blue-600">{loading ? '...' : stats.low}</p>
-                                <p className="text-xs text-gray-500 mt-2">Monitoring only</p>
-                            </div>
-                        </div>
-
-                        {/* Content Grid */}
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                            {/* Alerts Feed */}
-                            <div className="lg:col-span-2 space-y-4">
-                                <div className="flex justify-between items-center mb-2">
-                                    <h3 className="font-semibold text-gray-900">Active Alerts</h3>
-                                    <span className="text-sm text-gray-500">{alerts.length} total issues</span>
-                                </div>
-
-                                {loading ? (
-                                    <div className="p-12 text-center text-gray-500">Checking compliance...</div>
-                                ) : alerts.length === 0 ? (
-                                    <div className="p-12 text-center bg-green-50 rounded-lg border border-green-100">
-                                        <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
-                                        <h3 className="text-green-800 font-bold">All Clear!</h3>
-                                        <p className="text-green-600">No compliance issues detected across systems.</p>
-                                    </div>
-                                ) : (
-                                    alerts.map((alert, idx) => {
-                                        const styles = getSeverityStyles(alert.type);
-                                        return (
-                                            <div
-                                                key={idx}
-                                                className={`bg-white rounded-lg border-l-4 ${styles.border} p-5 shadow-sm hover:shadow-md transition-all duration-300`}
-                                            >
-                                                <div className="flex items-start justify-between mb-2">
-                                                    <div>
-                                                        <div className="flex items-center gap-2 mb-1">
-                                                            <span className={`${styles.text} font-bold flex items-center gap-1`}>
-                                                                {styles.icon} {alert.type}
-                                                            </span>
-                                                            <span className={`text-xs font-semibold px-2 py-1 ${styles.badge} rounded`}>
-                                                                {alert.category}
-                                                            </span>
-                                                        </div>
-                                                        <h4 className="font-semibold text-gray-900">{alert.title}</h4>
-                                                    </div>
-                                                </div>
-                                                <p className="text-sm text-gray-600 mb-3">
-                                                    {alert.description} <br />
-                                                    <span className="font-medium text-gray-800">Employee: {alert.employeeName}</span>
-                                                </p>
-                                                {alert.dueDate && (
-                                                    <div className="text-xs text-gray-500 mt-2">
-                                                        Due: {alert.dueDate}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })
-                                )}
-                            </div>
-
-                            {/* Stats Sidebar */}
-                            <div className="space-y-6">
-                                {/* Categories */}
-                                <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-6">
-                                    <h4 className="font-semibold text-gray-900 mb-4">Issues by Category</h4>
-                                    <div className="space-y-4">
-                                        {[
-                                            { label: 'Discrepancies', count: stats.byCategory.Discrepancy, color: 'bg-purple-600' },
-                                            { label: 'Iqama / ID', count: stats.byCategory.Iqama, color: 'bg-indigo-600' },
-                                            { label: 'Passport', count: stats.byCategory.Passport, color: 'bg-blue-600' },
-                                            { label: 'Financial / IBAN', count: stats.byCategory.Financial, color: 'bg-green-600' },
-                                            { label: 'GOSI', count: stats.byCategory.GOSI, color: 'bg-orange-600' },
-                                        ].map(cat => (
-                                            <div key={cat.label}>
-                                                <div className="flex justify-between text-sm mb-1">
-                                                    <span className="text-gray-600">{cat.label}</span>
-                                                    <span className="font-semibold">{cat.count}</span>
-                                                </div>
-                                                <div className="w-full bg-gray-100 rounded-full h-1.5">
-                                                    <div className={`h-1.5 rounded-full ${cat.color}`} style={{ width: `${(cat.count / Math.max(1, alerts.length)) * 100}%` }}></div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
+                                <select
+                                    value={filterCategory}
+                                    onChange={(e) => setFilterCategory(e.target.value)}
+                                    className="px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
+                                >
+                                    <option value="All">All Categories</option>
+                                    <option value="Iqama">Iqama</option>
+                                    <option value="Passport">Passport</option>
+                                    <option value="GOSI">GOSI</option>
+                                    <option value="Financial">Financial</option>
+                                    <option value="Discrepancy">Discrepancy</option>
+                                </select>
                             </div>
                         </div>
                     </div>
-                </main>
-            </div>
-        </div>
+
+                    {/* Alerts List */}
+                    <div className="bg-white rounded-2xl shadow-[0_2px_20px_rgba(0,0,0,0.03)] border border-slate-100 overflow-hidden">
+                        <div className="p-6 border-b border-slate-100">
+                            <h2 className="text-lg font-bold text-slate-800">Compliance Alerts</h2>
+                            <p className="text-sm text-slate-500 mt-1">Showing {filteredAlerts.length} of {alerts.length} alerts</p>
+                        </div>
+
+                        <div className="divide-y divide-slate-100">
+                            {filteredAlerts.length > 0 ? filteredAlerts.map((alert, index) => (
+                                <motion.div
+                                    key={alert.id}
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: index * 0.03 }}
+                                    onClick={() => setSelectedAlert(alert)}
+                                    className="p-6 hover:bg-slate-50 transition-colors cursor-pointer group"
+                                >
+                                    <div className="flex items-start gap-4">
+                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${getSeverityColor(alert.type)}`}>
+                                            {getSeverityIcon(alert.type)}
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="flex items-start justify-between mb-2">
+                                                <div>
+                                                    <h3 className="font-bold text-slate-900 text-base group-hover:text-orange-600 transition-colors">
+                                                        {alert.title}
+                                                    </h3>
+                                                    <p className="text-sm text-slate-500 mt-1">{alert.employeeName}</p>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <span className={`text-xs font-bold px-3 py-1 rounded-full border ${getSeverityColor(alert.type)}`}>
+                                                        {alert.type}
+                                                    </span>
+                                                    <span className="text-xs font-semibold px-3 py-1 rounded-full bg-slate-100 text-slate-600">
+                                                        {alert.category}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <p className="text-sm text-slate-600">{alert.description}</p>
+                                            {alert.dueDate && (
+                                                <div className="flex items-center gap-2 mt-3 text-xs text-slate-400">
+                                                    <Calendar size={14} />
+                                                    Due: {new Date(alert.dueDate).toLocaleDateString()}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <button className="text-slate-400 hover:text-slate-700 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <MoreVertical size={18} />
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            )) : (
+                                <div className="p-12 text-center">
+                                    <Shield className="mx-auto text-slate-300 mb-4" size={48} />
+                                    <h3 className="text-lg font-semibold text-slate-700 mb-2">No alerts found</h3>
+                                    <p className="text-sm text-slate-400">All compliance checks are passing or adjust your filters</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </motion.div>
+            )}
+
+            {/* Alert Detail Modal */}
+            <AnimatePresence>
+                {selectedAlert && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                        onClick={() => setSelectedAlert(null)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.95, y: 20 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="bg-white rounded-3xl shadow-2xl max-w-lg w-full"
+                        >
+                            <div className="p-6 border-b border-slate-100 flex items-start justify-between">
+                                <div className="flex items-start gap-4">
+                                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center border ${getSeverityColor(selectedAlert.type)}`}>
+                                        {getSeverityIcon(selectedAlert.type)}
+                                    </div>
+                                    <div>
+                                        <h2 className="text-xl font-bold text-slate-900">{selectedAlert.title}</h2>
+                                        <p className="text-sm text-slate-500 mt-1">{selectedAlert.employeeName}</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setSelectedAlert(null)}
+                                    className="w-10 h-10 rounded-xl hover:bg-slate-100 flex items-center justify-center transition-colors"
+                                >
+                                    <X size={20} className="text-slate-600" />
+                                </button>
+                            </div>
+
+                            <div className="p-6 space-y-4">
+                                <div className="flex gap-3">
+                                    <span className={`text-sm font-bold px-4 py-2 rounded-full border ${getSeverityColor(selectedAlert.type)}`}>
+                                        {selectedAlert.type} Priority
+                                    </span>
+                                    <span className="text-sm font-semibold px-4 py-2 rounded-full bg-slate-100 text-slate-700">
+                                        {selectedAlert.category}
+                                    </span>
+                                </div>
+
+                                <div className="bg-slate-50 rounded-2xl p-5">
+                                    <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-3">Description</h3>
+                                    <p className="text-sm text-slate-600">{selectedAlert.description}</p>
+                                </div>
+
+                                {selectedAlert.dueDate && (
+                                    <div className="bg-orange-50 rounded-2xl p-5 border border-orange-100">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <Calendar size={16} className="text-orange-600" />
+                                            <h3 className="text-sm font-bold text-orange-900 uppercase tracking-wider">Due Date</h3>
+                                        </div>
+                                        <p className="text-base font-semibold text-orange-800">
+                                            {new Date(selectedAlert.dueDate).toLocaleDateString('en-US', {
+                                                weekday: 'long',
+                                                year: 'numeric',
+                                                month: 'long',
+                                                day: 'numeric'
+                                            })}
+                                        </p>
+                                    </div>
+                                )}
+
+                                <div className="flex gap-3 pt-4">
+                                    <button className="flex-1 px-4 py-3 bg-slate-900 text-white rounded-xl font-semibold hover:bg-slate-800 transition-colors">
+                                        Mark as Resolved
+                                    </button>
+                                    <button className="px-4 py-3 bg-slate-100 text-slate-700 rounded-xl font-semibold hover:bg-slate-200 transition-colors">
+                                        View Employee
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </AppLayout>
     );
 }
