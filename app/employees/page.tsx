@@ -55,6 +55,8 @@ export default function EmployeesPage() {
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [statusFilter, setStatusFilter] = useState('Active');
     const [searchQuery, setSearchQuery] = useState('');
+    const [showDetailedView, setShowDetailedView] = useState(false);
+    const [complianceData, setComplianceData] = useState<any>(null);
 
     useEffect(() => {
         fetchEmployees();
@@ -83,6 +85,26 @@ export default function EmployeesPage() {
             console.error('Error fetching employees:', err);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchComplianceData = async (employeeId: string) => {
+        try {
+            const { data, error } = await supabase
+                .from('employee_compliance')
+                .select('*')
+                .eq('employee_id', employeeId)
+                .single();
+
+            if (error) {
+                console.error('Error fetching compliance data:', error);
+                setComplianceData(null);
+            } else {
+                setComplianceData(data);
+            }
+        } catch (err) {
+            console.error('Error:', err);
+            setComplianceData(null);
         }
     };
 
@@ -493,10 +515,136 @@ export default function EmployeesPage() {
                                     <button className="flex-1 px-4 py-3 bg-slate-900 text-white rounded-xl font-semibold hover:bg-slate-800 transition-colors">
                                         Edit Profile
                                     </button>
-                                    <button className="px-4 py-3 bg-slate-100 text-slate-700 rounded-xl font-semibold hover:bg-slate-200 transition-colors">
-                                        View Full Details
+                                    <button
+                                        onClick={() => {
+                                            setShowDetailedView(!showDetailedView);
+                                            if (!showDetailedView && selectedEmployee) {
+                                                fetchComplianceData(selectedEmployee.id);
+                                            }
+                                        }}
+                                        className="px-4 py-3 bg-orange-500 text-white rounded-xl font-semibold hover:bg-orange-600 transition-colors flex items-center gap-2"
+                                    >
+                                        {showDetailedView ? 'Hide' : 'View'} Portal Details
+                                        <FileText size={16} />
                                     </button>
                                 </div>
+
+                                {/* DETAILED VIEW - Portal Compliance Data */}
+                                {showDetailedView && complianceData && (
+                                    <motion.div
+                                        initial={{ opacity: 0, height: 0 }}
+                                        animate={{ opacity: 1, height: 'auto' }}
+                                        exit={{ opacity: 0, height: 0 }}
+                                        className="mt-6 space-y-4"
+                                    >
+                                        {/* Qiwa Data */}
+                                        <div className="bg-orange-50 border-2 border-orange-200 rounded-2xl p-5">
+                                            <div className="flex items-center gap-2 mb-4">
+                                                <Building2 size={20} className="text-orange-600" />
+                                                <h4 className="font-bold text-slate-900">Qiwa Platform Data</h4>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-3 text-sm">
+                                                <div>
+                                                    <p className="text-xs text-slate-500">Status</p>
+                                                    <p className="font-semibold text-slate-800">{complianceData.qiwa_status || 'N/A'}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs text-slate-500">Occupation</p>
+                                                    <p className="font-semibold text-slate-800">{complianceData.occupation || 'N/A'}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs text-slate-500">Skill Level</p>
+                                                    <p className="font-semibold text-slate-800">{complianceData.skill_level || 'N/A'}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs text-slate-500">Employee ID</p>
+                                                    <p className="font-semibold text-slate-800">{complianceData.employee_id_qiwa || 'N/A'}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Muqeem Data */}
+                                        <div className="bg-green-50 border-2 border-green-200 rounded-2xl p-5">
+                                            <div className="flex items-center gap-2 mb-4">
+                                                <FileText size={20} className="text-green-600" />
+                                                <h4 className="font-bold text-slate-900">Muqeem (Residency) Data</h4>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-3 text-sm">
+                                                <div>
+                                                    <p className="text-xs text-slate-500">Iqama Number</p>
+                                                    <p className="font-semibold text-slate-800">{complianceData.iqama_number || 'N/A'}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs text-slate-500">Iqama Expiry</p>
+                                                    <p className="font-semibold text-slate-800">
+                                                        {complianceData.iqama_expiry ? new Date(complianceData.iqama_expiry).toLocaleDateString() : 'N/A'}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs text-slate-500">Passport Number</p>
+                                                    <p className="font-semibold text-slate-800">{complianceData.passport_number || 'N/A'}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs text-slate-500">Passport Expiry</p>
+                                                    <p className="font-semibold text-slate-800">
+                                                        {complianceData.passport_expiry ? new Date(complianceData.passport_expiry).toLocaleDateString() : 'N/A'}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* GOSI Data */}
+                                        <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-5">
+                                            <div className="flex items-center gap-2 mb-4">
+                                                <Shield size={20} className="text-blue-600" />
+                                                <h4 className="font-bold text-slate-900">GOSI (Social Insurance) Data</h4>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-3 text-sm">
+                                                <div>
+                                                    <p className="text-xs text-slate-500">GOSI Number</p>
+                                                    <p className="font-semibold text-slate-800">{complianceData.gosi_number || 'N/A'}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs text-slate-500">Basic Wage</p>
+                                                    <p className="font-semibold text-slate-800">SAR {complianceData.gosi_wage || 'N/A'}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs text-slate-500">Pension Eligibility</p>
+                                                    <p className="font-semibold text-slate-800">{complianceData.pension_eligible ? 'Yes' : 'No'}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs text-slate-500">Joining Date</p>
+                                                    <p className="font-semibold text-slate-800">
+                                                        {complianceData.gosi_joining_date ? new Date(complianceData.gosi_joining_date).toLocaleDateString() : 'N/A'}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Mudad Data */}
+                                        <div className="bg-purple-50 border-2 border-purple-200 rounded-2xl p-5">
+                                            <div className="flex items-center gap-2 mb-4">
+                                                <Calendar size={20} className="text-purple-600" />
+                                                <h4 className="font-bold text-slate-900">Mudad (Payroll) Data</h4>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-3 text-sm">
+                                                <div>
+                                                    <p className="text-xs text-slate-500">Status</p>
+                                                    <p className="font-semibold text-slate-800">{complianceData.mudad_status || 'N/A'}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs text-slate-500">Salary</p>
+                                                    <p className="font-semibold text-slate-800">SAR {complianceData.mudad_salary || 'N/A'}</p>
+                                                </div>
+                                                <div className="col-span-2">
+                                                    <p className="text-xs text-slate-500">IBAN</p>
+                                                    <p className="font-semibold text-slate-800">{complianceData.iban || 'Add IBAN Number'}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                )}
+
                             </div>
                         </motion.div>
                     </motion.div>
