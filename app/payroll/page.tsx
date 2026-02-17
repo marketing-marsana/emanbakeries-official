@@ -2,21 +2,54 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { navItems } from '@/app/components/enhanced/navConfig';
-import { useRouter } from 'next/navigation';
-import { CalendarDays, FileDown, Calculator, DollarSign, CalendarCheck } from 'lucide-react';
+import { AppLayout } from '../components/navigation/AppLayout';
+import {
+    DollarSign,
+    Calendar,
+    Download,
+    Calculator,
+    TrendingUp,
+    Users,
+    FileText,
+    CheckCircle,
+    AlertCircle,
+    MoreVertical,
+    Plus,
+    RefreshCw,
+    Search
+} from 'lucide-react';
+import { motion } from 'framer-motion';
+
+interface PayrollRecord {
+    id?: string;
+    employee_id: string;
+    employee_name: string;
+    employee_position: string;
+    month: string;
+    basic_salary: number;
+    salary_basic: number;
+    allowances: number;
+    deductions: number;
+    leave_days: number;
+    net_salary: number;
+    status: string;
+}
 
 export default function PayrollPage() {
-    const router = useRouter();
-    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-
-    // State
-    const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
-    const [payrollData, setPayrollData] = useState<any[]>([]);
+    const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
+    const [payrollData, setPayrollData] = useState<PayrollRecord[]>([]);
     const [loading, setLoading] = useState(false);
     const [generating, setGenerating] = useState(false);
     const [saving, setSaving] = useState(false);
     const [hasExistingRecords, setHasExistingRecords] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+
+    const [stats, setStats] = useState({
+        totalPayroll: 0,
+        totalEmployees: 0,
+        totalDeductions: 0,
+        averageSalary: 0
+    });
 
     useEffect(() => {
         fetchPayrollData();
@@ -26,7 +59,6 @@ export default function PayrollPage() {
         try {
             setLoading(true);
 
-            // 1. Check if payroll exists for this month
             const { data: existingRecords, error } = await supabase
                 .from('payroll_records')
                 .select(`
@@ -39,15 +71,27 @@ export default function PayrollPage() {
 
             if (existingRecords && existingRecords.length > 0) {
                 setHasExistingRecords(true);
-                setPayrollData(existingRecords.map(record => ({
+                const formattedData = existingRecords.map(record => ({
                     ...record,
                     employee_name: record.employee?.full_name_en || 'Unknown',
                     employee_position: record.employee?.position,
                     basic_salary: record.salary_basic
-                })));
+                }));
+                setPayrollData(formattedData);
+
+                const totalPayroll = formattedData.reduce((sum, r) => sum + (r.net_salary || 0), 0);
+                const totalDeductions = formattedData.reduce((sum, r) => sum + (r.deductions || 0), 0);
+
+                setStats({
+                    totalPayroll,
+                    totalEmployees: formattedData.length,
+                    totalDeductions,
+                    averageSalary: formattedData.length > 0 ? totalPayroll / formattedData.length : 0
+                });
             } else {
                 setHasExistingRecords(false);
-                setPayrollData([]); // Clear previous data
+                setPayrollData([]);
+                setStats({ totalPayroll: 0, totalEmployees: 0, totalDeductions: 0, averageSalary: 0 });
             }
 
         } catch (err) {
@@ -61,7 +105,6 @@ export default function PayrollPage() {
         try {
             setGenerating(true);
 
-            // 1. Fetch all active employees
             const { data: employees, error: empError } = await supabase
                 .from('employees')
                 .select('*')
@@ -69,27 +112,20 @@ export default function PayrollPage() {
 
             if (empError) throw empError;
 
-            // 2. Fetch all approved leaves overlapping the selected month
-            // Selected Month: YYYY-MM
             const [year, month] = selectedMonth.split('-');
             const startDate = `${selectedMonth}-01`;
-            const endDate = new Date(parseInt(year), parseInt(month), 0).toISOString().slice(0, 10); // Last day of month
+            const endDate = new Date(parseInt(year), parseInt(month), 0).toISOString().slice(0, 10);
 
-            // Query leaves: (start <= end_of_month) AND (end >= start_of_month) AND status IN ('Approved', 'Completed')
-            const { data: leaves, error: leaveError } = await supabase
+            const { data: leaves } = await supabase
                 .from('leaves')
                 .select('*')
                 .in('status', ['Approved', 'Completed'])
                 .lte('start_date', endDate)
                 .gte('end_date', startDate);
 
-            if (leaveError) throw leaveError;
-
-            // 3. Calculate Payroll for each employee
             const computedPayroll = employees.map(emp => {
                 const empLeaves = leaves?.filter(l => l.employee_id === emp.id) || [];
 
-                // Calculate leave days in this month
                 let leaveDays = 0;
                 empLeaves.forEach(leave => {
                     const lStart = new Date(leave.start_date);
@@ -97,352 +133,337 @@ export default function PayrollPage() {
                     const mStart = new Date(startDate);
                     const mEnd = new Date(endDate);
 
-                    // Intersection
-                    const start = lStart > mStart ? lStart : mStart;
-                    const end = lEnd < mEnd ? lEnd : mEnd;
+                    const overlapStart = lStart > mStart ? lStart : mStart;
+                    const overlapEnd = lEnd < mEnd ? lEnd : mEnd;
 
-                    if (start <= end) {
-                        const days = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24) + 1;
-                        leaveDays += Math.round(days); // Round to integer days
+                    if (overlapStart <= overlapEnd) {
+                        const days = Math.ceil((overlapEnd.getTime() - overlapStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                        leaveDays += days;
                     }
                 });
 
-                // Payroll Rules:
-                // Base: 30 days
-                // Working Days = 30 - Leave Days (Cap at 0)
-                // Daily Rate = Salary / 30
-
                 const baseSalary = emp.salary || 0;
-                // If started this month? Handle partial month joiners? 
-                // User requirement: "If employee starts vacation on 10th... pay for 10 working days".
-                // Doesn't mention join date. Assuming full month employment unless logic added.
-                // Assuming 30 days standard.
-
-                const workingDays = Math.max(0, 30 - leaveDays);
-                const dailyRate = baseSalary / 30;
-                let finalSalary = dailyRate * workingDays;
-
-                // Rounding
-                finalSalary = Math.round(finalSalary * 100) / 100;
+                const allowances = 0;
+                const deductions = (baseSalary / 30) * leaveDays;
+                const netSalary = baseSalary + allowances - deductions;
 
                 return {
                     employee_id: emp.id,
                     employee_name: emp.full_name_en,
                     employee_position: emp.position,
                     month: selectedMonth,
+                    basic_salary: baseSalary,
                     salary_basic: baseSalary,
-                    housing_allowance: 0, // Placeholder
-                    other_allowance: 0, // Placeholder
-                    deductions: 0, // Placeholder
-                    working_days: workingDays,
+                    allowances,
+                    deductions,
                     leave_days: leaveDays,
-                    final_salary: finalSalary,
+                    net_salary: netSalary,
                     status: 'Draft'
                 };
             });
 
             setPayrollData(computedPayroll);
-            setHasExistingRecords(false); // Because it's a new generation (or preview)
+            setHasExistingRecords(false);
+
+            const totalPayroll = computedPayroll.reduce((sum, r) => sum + r.net_salary, 0);
+            const totalDeductions = computedPayroll.reduce((sum, r) => sum + r.deductions, 0);
+
+            setStats({
+                totalPayroll,
+                totalEmployees: computedPayroll.length,
+                totalDeductions,
+                averageSalary: computedPayroll.length > 0 ? totalPayroll / computedPayroll.length : 0
+            });
 
         } catch (err) {
             console.error('Error generating payroll:', err);
-            alert('Failed to generate payroll calculations.');
         } finally {
             setGenerating(false);
         }
     };
 
     const handleSavePayroll = async () => {
-        if (payrollData.length === 0) return;
-
         try {
             setSaving(true);
 
-            // Upsert each record
-            // Since we added UNIQUE constraint on (employee_id, month), standard Insert might fail if not using Upsert.
-            // Upsert based on conflict.
-
-            const recordsToInsert = payrollData.map(({ employee_name, employee_position, ...record }) => record);
+            const recordsToSave = payrollData.map(record => ({
+                employee_id: record.employee_id,
+                month: selectedMonth,
+                salary_basic: record.basic_salary,
+                allowances: record.allowances || 0,
+                deductions: record.deductions || 0,
+                leave_days: record.leave_days || 0,
+                net_salary: record.net_salary,
+                status: 'Processed'
+            }));
 
             const { error } = await supabase
                 .from('payroll_records')
-                .upsert(recordsToInsert, { onConflict: 'employee_id, month' });
+                .insert(recordsToSave);
 
             if (error) throw error;
 
+            await fetchPayrollData();
             alert('Payroll saved successfully!');
-            setHasExistingRecords(true);
-            fetchPayrollData(); // Refresh to ensure sync
 
         } catch (err) {
             console.error('Error saving payroll:', err);
-            alert('Failed to save payroll records.');
+            alert('Error saving payroll');
         } finally {
             setSaving(false);
         }
     };
 
-    const handleExportCSV = () => {
-        if (payrollData.length === 0) return;
+    const filteredPayroll = payrollData.filter(record =>
+        record.employee_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        record.employee_position?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
-        const headers = ['Employee ID', 'Name', 'Position', 'Basic Salary', 'Leave Days', 'Working Days', 'Final Salary', 'Status'];
-        const csvContent = [
-            headers.join(','),
-            ...payrollData.map(row => [
-                row.employee_id,
-                `"${row.employee_name}"`,
-                `"${row.employee_position}"`,
-                row.salary_basic,
-                row.leave_days,
-                row.working_days,
-                row.final_salary,
-                row.status
-            ].join(','))
-        ].join('\n');
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        show: {
+            opacity: 1,
+            transition: { staggerChildren: 0.05 }
+        }
+    };
 
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-        link.setAttribute('href', url);
-        link.setAttribute('download', `payroll_${selectedMonth}.csv`);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+    const itemVariants = {
+        hidden: { opacity: 0, y: 15 },
+        show: { opacity: 1, y: 0 }
     };
 
     return (
-        <div className="bg-gray-50 min-h-screen">
-            {/* Top Navigation Bar - reused structure */}
-            <nav className="bg-white shadow-sm border-b border-gray-200 fixed top-0 w-full z-40">
-                <div className="flex items-center justify-between h-16 px-6">
-                    <div className="flex items-center gap-4">
-                        <button
-                            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                            className="p-2 hover:bg-gray-100 rounded-lg transition"
-                        >
-                            <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                            </svg>
-                        </button>
-                        <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700">
-                            Eman Bakery <span className="text-indigo-600 font-extrabold ml-1">360</span>
-                        </h1>
-                    </div>
-                    <div className="hidden md:flex items-center flex-1 max-w-md mx-8"></div>
-                    <div className="flex items-center gap-4">
-                        <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-700 font-bold">
-                            HR
-                        </div>
+        <AppLayout>
+            {/* Header */}
+            <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
+                <div>
+                    <h1 className="text-2xl font-bold tracking-tight text-slate-900">Payroll Management</h1>
+                    <p className="text-sm text-slate-500 mt-1 font-medium">
+                        Process monthly salaries for {stats.totalEmployees} employees
+                    </p>
+                </div>
+
+                <div className="flex items-center gap-3">
+                    <div className="flex items-center bg-white border border-slate-200 rounded-xl px-4 py-2.5 gap-2">
+                        <Calendar size={18} className="text-slate-400" />
+                        <input
+                            type="month"
+                            value={selectedMonth}
+                            onChange={(e) => setSelectedMonth(e.target.value)}
+                            className="bg-transparent border-none outline-none text-sm font-semibold text-slate-700 cursor-pointer"
+                        />
                     </div>
                 </div>
-            </nav>
+            </header>
 
-            <div className="flex pt-16">
-                {/* Sidebar - Premium Glassmorphism */}
-                <aside
-                    className={`bg-slate-900 text-slate-300 min-h-screen fixed left-0 top-16 shadow-2xl z-30 transition-all duration-300 border-r border-slate-700/50 backdrop-blur-xl ${sidebarCollapsed ? 'w-20' : 'w-72'
-                        }`}
-                >
-                    <div className={`p-6 mb-2 border-b border-slate-700/50 transition-all duration-300 ${sidebarCollapsed ? 'opacity-0 h-0 p-0 overflow-hidden' : 'opacity-100'}`}>
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-gradient-to-tr from-indigo-600 to-indigo-400 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
-                                <span className="text-white font-bold text-xl">E</span>
-                            </div>
-                            <div>
-                                <p className="text-white font-bold text-lg leading-none">Eman Bakery</p>
-                                <p className="text-slate-500 text-xs mt-1 uppercase tracking-widest font-bold">Workspace</p>
-                            </div>
-                        </div>
-                    </div>
-                    <nav className="p-4 space-y-2">
-                        {navItems.map((item) => {
-                            const isActive = item.href === '/payroll';
-                            return (
-                                <a
-                                    key={item.href}
-                                    href={item.href}
-                                    className={`flex items-center gap-4 px-4 py-3 rounded-lg transition-all duration-300 group ${isActive
-                                        ? 'bg-slate-800 text-white shadow-lg shadow-indigo-500/20 border-l-4 border-indigo-500 pl-3'
-                                        : 'hover:bg-slate-800 hover:text-white hover:pl-5'
-                                        }`}
-                                >
-                                    <span className={`transition-colors duration-300 ${isActive ? 'text-indigo-400' : 'text-slate-400 group-hover:text-indigo-400'}`}>
-                                        {item.icon}
-                                    </span>
-                                    {!sidebarCollapsed && <span className="font-medium tracking-wide">{item.name}</span>}
-                                </a>
-                            );
-                        })}
-                    </nav>
-                </aside>
-
-                {/* Main Content */}
-                <main className={`flex-1 transition-all duration-300 ${sidebarCollapsed ? 'ml-20' : 'ml-72'}`}>
-                    <div className="p-8">
-                        {/* Header */}
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-                            <div>
-                                <h2 className="text-3xl font-bold text-gray-900 mb-1">Payroll Generation</h2>
-                                <p className="text-gray-600">Calculate and manage monthly salary payments.</p>
-                            </div>
-                        </div>
-
-                        {/* Control Panel */}
-                        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8">
-                            <div className="flex flex-wrap items-end gap-6">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Select Month</label>
-                                    <div className="flex gap-2">
-                                        <select
-                                            value={parseInt(selectedMonth.split('-')[0])}
-                                            onChange={(e) => {
-                                                const newYear = e.target.value;
-                                                const month = selectedMonth.split('-')[1];
-                                                setSelectedMonth(`${newYear}-${month}`);
-                                            }}
-                                            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white"
-                                        >
-                                            {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(year => (
-                                                <option key={year} value={year}>{year}</option>
-                                            ))}
-                                        </select>
-                                        <select
-                                            value={selectedMonth.split('-')[1]}
-                                            onChange={(e) => {
-                                                const year = selectedMonth.split('-')[0];
-                                                const newMonth = e.target.value;
-                                                setSelectedMonth(`${year}-${newMonth}`);
-                                            }}
-                                            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white"
-                                        >
-                                            {Array.from({ length: 12 }, (_, i) => {
-                                                const m = (i + 1).toString().padStart(2, '0');
-                                                const date = new Date(2000, i, 1); // 2000 is generic
-                                                return { value: m, label: date.toLocaleString('default', { month: 'long' }) };
-                                            }).map(({ value, label }) => (
-                                                <option key={value} value={value}>{label}</option>
-                                            ))}
-                                        </select>
-                                    </div>
+            {loading ? (
+                <div className="flex items-center justify-center h-96">
+                    <div className="w-12 h-12 border-4 border-orange-500/20 border-t-orange-500 rounded-full animate-spin"></div>
+                </div>
+            ) : (
+                <motion.div variants={containerVariants} initial="hidden" animate="show">
+                    {/* Stats Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
+                        <motion.div variants={itemVariants} className="bg-white rounded-3xl p-6 shadow-[0_2px_20px_rgba(0,0,0,0.03)] border border-slate-100 hover:shadow-md transition-all group">
+                            <div className="flex justify-between items-start mb-4">
+                                <div className="w-12 h-12 rounded-full bg-orange-50 flex items-center justify-center text-orange-500 group-hover:scale-110 transition-transform">
+                                    <DollarSign size={24} />
                                 </div>
-                                <div className="flex gap-3">
+                            </div>
+                            <h3 className="text-3xl font-bold text-slate-800 tracking-tight mb-1">
+                                SAR {stats.totalPayroll.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                            </h3>
+                            <p className="text-sm font-medium text-slate-500">Total Payroll</p>
+                        </motion.div>
+
+                        <motion.div variants={itemVariants} className="bg-white rounded-3xl p-6 shadow-[0_2px_20px_rgba(0,0,0,0.03)] border border-slate-100 hover:shadow-md transition-all group">
+                            <div className="flex justify-between items-start mb-4">
+                                <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-blue-500 group-hover:scale-110 transition-transform">
+                                    <Users size={24} />
+                                </div>
+                            </div>
+                            <h3 className="text-3xl font-bold text-slate-800 tracking-tight mb-1">{stats.totalEmployees}</h3>
+                            <p className="text-sm font-medium text-slate-500">Employees</p>
+                        </motion.div>
+
+                        <motion.div variants={itemVariants} className="bg-white rounded-3xl p-6 shadow-[0_2px_20px_rgba(0,0,0,0.03)] border border-slate-100 hover:shadow-md transition-all group">
+                            <div className="flex justify-between items-start mb-4">
+                                <div className="w-12 h-12 rounded-full bg-purple-50 flex items-center justify-center text-purple-500 group-hover:scale-110 transition-transform">
+                                    <TrendingUp size={24} />
+                                </div>
+                            </div>
+                            <h3 className="text-3xl font-bold text-slate-800 tracking-tight mb-1">
+                                SAR {stats.averageSalary.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                            </h3>
+                            <p className="text-sm font-medium text-slate-500">Average Salary</p>
+                        </motion.div>
+
+                        <motion.div variants={itemVariants} className="bg-white rounded-3xl p-6 shadow-[0_2px_20px_rgba(0,0,0,0.03)] border border-slate-100 hover:shadow-md transition-all group">
+                            <div className="flex justify-between items-start mb-4">
+                                <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center text-red-500 group-hover:scale-110 transition-transform">
+                                    <AlertCircle size={24} />
+                                </div>
+                            </div>
+                            <h3 className="text-3xl font-bold text-slate-800 tracking-tight mb-1">
+                                SAR {stats.totalDeductions.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                            </h3>
+                            <p className="text-sm font-medium text-slate-500">Total Deductions</p>
+                        </motion.div>
+                    </div>
+
+                    {/* Actions Bar */}
+                    <div className="bg-white rounded-2xl p-6 shadow-[0_2px_20px_rgba(0,0,0,0.03)] border border-slate-100 mb-8">
+                        <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+                            <div className="flex items-center bg-slate-50 rounded-xl px-4 py-2.5 w-full lg:w-96 border border-slate-200/60">
+                                <Search className="text-slate-400" size={18} />
+                                <input
+                                    type="text"
+                                    placeholder="Search employees..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="bg-transparent border-none outline-none text-sm text-slate-600 ml-3 w-full placeholder:text-slate-400 font-medium"
+                                />
+                            </div>
+
+                            <div className="flex gap-3">
+                                {!hasExistingRecords && (
                                     <button
                                         onClick={handleGeneratePayroll}
-                                        disabled={generating || saving}
-                                        className="flex items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition disabled:opacity-50"
+                                        disabled={generating}
+                                        className="px-4 py-2.5 bg-slate-900 text-white rounded-xl text-sm font-semibold hover:bg-slate-800 transition-colors shadow-lg shadow-slate-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
-                                        <Calculator className="w-5 h-5" />
-                                        {generating ? 'Calculating...' : (hasExistingRecords ? 'Re-Calculate' : 'Generate Payroll')}
+                                        {generating ? <RefreshCw size={18} className="animate-spin" /> : <Calculator size={18} />}
+                                        {generating ? 'Generating...' : 'Generate Payroll'}
                                     </button>
+                                )}
 
-                                    {!hasExistingRecords && payrollData.length > 0 && (
-                                        <button
-                                            onClick={handleSavePayroll}
-                                            disabled={saving}
-                                            className="flex items-center gap-2 px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition disabled:opacity-50"
-                                        >
-                                            <CalendarCheck className="w-5 h-5" />
-                                            {saving ? 'Saving...' : 'Save Records'}
-                                        </button>
-                                    )}
+                                {payrollData.length > 0 && !hasExistingRecords && (
+                                    <button
+                                        onClick={handleSavePayroll}
+                                        disabled={saving}
+                                        className="px-4 py-2.5 bg-orange-500 text-white rounded-xl text-sm font-semibold hover:bg-orange-600 transition-colors flex items-center gap-2 disabled:opacity-50"
+                                    >
+                                        {saving ? <RefreshCw size={18} className="animate-spin" /> : <CheckCircle size={18} />}
+                                        {saving ? 'Saving...' : 'Save Payroll'}
+                                    </button>
+                                )}
 
-                                    {(hasExistingRecords || payrollData.length > 0) && (
-                                        <button
-                                            onClick={handleExportCSV}
-                                            className="flex items-center gap-2 px-6 py-2 border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium rounded-lg transition"
-                                        >
-                                            <FileDown className="w-5 h-5" />
-                                            Export CSV
-                                        </button>
-                                    )}
-                                </div>
+                                <button className="px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-semibold hover:bg-slate-50 transition-colors flex items-center gap-2">
+                                    <Download size={18} />
+                                    Export
+                                </button>
                             </div>
-                        </div>
-
-                        {/* Results Table */}
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                                <h3 className="font-semibold text-gray-900">Payroll ({selectedMonth})</h3>
-                                <span className="text-sm text-gray-500">{payrollData.length} records</span>
-                            </div>
-
-                            {loading ? (
-                                <div className="p-12 flex justify-center">
-                                    <div className="animate-spin w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full"></div>
-                                </div>
-                            ) : payrollData.length === 0 ? (
-                                <div className="p-12 text-center text-gray-500">
-                                    No payroll data found for this month. Click "Generate Payroll" to start.
-                                </div>
-                            ) : (
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-left">
-                                        <thead className="bg-gray-50 border-b border-gray-200">
-                                            <tr>
-                                                <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Employee</th>
-                                                <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Details</th>
-                                                <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Basic Salary</th>
-                                                <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase">Leave Days</th>
-                                                <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase">Working Days</th>
-                                                <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Net Pay</th>
-                                                <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase">Status</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-gray-100">
-                                            {payrollData.map((record, idx) => (
-                                                <tr key={idx} className="hover:bg-gray-50 transition">
-                                                    <td className="px-6 py-4">
-                                                        <div>
-                                                            <p className="font-semibold text-gray-900">{record.employee_name}</p>
-                                                            <p className="text-xs text-gray-500">{record.employee_id.slice(0, 8)}...</p>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-600">
-                                                            {record.employee_position || 'N/A'}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-6 py-4 text-right tabular-nums text-gray-600">
-                                                        {record.salary_basic?.toLocaleString()}
-                                                    </td>
-                                                    <td className="px-6 py-4 text-center">
-                                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${record.leave_days > 0 ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 text-gray-600'}`}>
-                                                            {record.leave_days}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-6 py-4 text-center font-medium text-gray-900">
-                                                        {record.working_days}
-                                                    </td>
-                                                    <td className="px-6 py-4 text-right font-bold text-indigo-600 tabular-nums">
-                                                        {record.final_salary?.toLocaleString()} SAR
-                                                    </td>
-                                                    <td className="px-6 py-4 text-center">
-                                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${record.status === 'Paid' ? 'bg-green-100 text-green-800' :
-                                                            hasExistingRecords ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'
-                                                            }`}>
-                                                            {hasExistingRecords ? 'Saved' : 'Draft'}
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                        <tfoot className="bg-gray-50 border-t border-gray-200">
-                                            <tr>
-                                                <td colSpan={5} className="px-6 py-4 text-right font-semibold text-gray-900">Total Calculation:</td>
-                                                <td className="px-6 py-4 text-right font-bold text-indigo-700 text-lg">
-                                                    {payrollData.reduce((sum, r) => sum + (r.final_salary || 0), 0).toLocaleString()} SAR
-                                                </td>
-                                                <td></td>
-                                            </tr>
-                                        </tfoot>
-                                    </table>
-                                </div>
-                            )}
                         </div>
                     </div>
-                </main>
-            </div>
-        </div>
+
+                    {/* Payroll Table */}
+                    {payrollData.length > 0 ? (
+                        <div className="bg-white rounded-2xl shadow-[0_2px_20px_rgba(0,0,0,0.03)] border border-slate-100 overflow-hidden">
+                            <div className="p-6 border-b border-slate-100">
+                                <h2 className="text-lg font-bold text-slate-800">
+                                    Payroll for {new Date(selectedMonth + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                                </h2>
+                                <p className="text-sm text-slate-500 mt-1">
+                                    {hasExistingRecords ? 'Processed Records' : 'Draft - Not yet saved'}
+                                </p>
+                            </div>
+
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead>
+                                        <tr className="bg-slate-50 border-b border-slate-100">
+                                            <th className="text-left py-4 px-6 text-xs font-semibold text-slate-600 uppercase tracking-wider">Employee</th>
+                                            <th className="text-left py-4 px-6 text-xs font-semibold text-slate-600 uppercase tracking-wider">Position</th>
+                                            <th className="text-right py-4 px-6 text-xs font-semibold text-slate-600 uppercase tracking-wider">Basic Salary</th>
+                                            <th className="text-right py-4 px-6 text-xs font-semibold text-slate-600 uppercase tracking-wider">Allowances</th>
+                                            <th className="text-right py-4 px-6 text-xs font-semibold text-slate-600 uppercase tracking-wider">Deductions</th>
+                                            <th className="text-center py-4 px-6 text-xs font-semibold text-slate-600 uppercase tracking-wider">Leave Days</th>
+                                            <th className="text-right py-4 px-6 text-xs font-semibold text-slate-600 uppercase tracking-wider">Net Salary</th>
+                                            <th className="text-center py-4 px-6 text-xs font-semibold text-slate-600 uppercase tracking-wider">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {filteredPayroll.map((record, index) => (
+                                            <motion.tr
+                                                key={record.employee_id}
+                                                initial={{ opacity: 0, x: -10 }}
+                                                animate={{ opacity: 1, x: 0 }}
+                                                transition={{ delay: index * 0.02 }}
+                                                className="border-b border-slate-50 hover:bg-slate-50 transition-colors"
+                                            >
+                                                <td className="py-4 px-6">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-9 h-9 rounded-full bg-orange-50 flex items-center justify-center text-orange-600 font-semibold text-xs">
+                                                            {record.employee_name?.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                                                        </div>
+                                                        <span className="font-semibold text-slate-900 text-sm">
+                                                            {record.employee_name}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                <td className="py-4 px-6 text-sm text-slate-600">{record.employee_position}</td>
+                                                <td className="py-4 px-6 text-sm text-slate-900 font-semibold text-right">
+                                                    SAR {record.basic_salary?.toLocaleString()}
+                                                </td>
+                                                <td className="py-4 px-6 text-sm text-green-600 font-semibold text-right">
+                                                    +{record.allowances?.toLocaleString()}
+                                                </td>
+                                                <td className="py-4 px-6 text-sm text-red-600 font-semibold text-right">
+                                                    -{record.deductions?.toFixed(2)}
+                                                </td>
+                                                <td className="py-4 px-6 text-center">
+                                                    <span className="text-xs font-bold px-3 py-1 rounded-full bg-slate-100 text-slate-700">
+                                                        {record.leave_days || 0} days
+                                                    </span>
+                                                </td>
+                                                <td className="py-4 px-6 text-base text-slate-900 font-bold text-right">
+                                                    SAR {record.net_salary?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                </td>
+                                                <td className="py-4 px-6 text-center">
+                                                    <button className="text-slate-400 hover:text-slate-700 transition-colors">
+                                                        <MoreVertical size={18} />
+                                                    </button>
+                                                </td>
+                                            </motion.tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Summary Footer */}
+                            <div className="bg-slate-50 p-6 border-t border-slate-100">
+                                <div className="flex justify-between items-center">
+                                    <div className="text-sm text-slate-600">
+                                        <span className="font-medium">Total Records:</span> {filteredPayroll.length}
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-xs text-slate-500 mb-1">Total Payroll Amount</p>
+                                        <p className="text-2xl font-bold text-slate-900">
+                                            SAR {stats.totalPayroll.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="bg-white rounded-2xl p-12 text-center shadow-[0_2px_20px_rgba(0,0,0,0.03)] border border-slate-100">
+                            <FileText className="mx-auto text-slate-300 mb-4" size={48} />
+                            <h3 className="text-lg font-semibold text-slate-700 mb-2">No Payroll Data</h3>
+                            <p className="text-sm text-slate-400 mb-6">
+                                Generate payroll for {new Date(selectedMonth + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                            </p>
+                            <button
+                                onClick={handleGeneratePayroll}
+                                disabled={generating}
+                                className="px-6 py-3 bg-slate-900 text-white rounded-xl font-semibold hover:bg-slate-800 transition-colors inline-flex items-center gap-2 disabled:opacity-50"
+                            >
+                                {generating ? <RefreshCw size={18} className="animate-spin" /> : <Calculator size={18} />}
+                                {generating ? 'Generating...' : 'Generate Payroll'}
+                            </button>
+                        </div>
+                    )}
+                </motion.div>
+            )}
+        </AppLayout>
     );
 }
