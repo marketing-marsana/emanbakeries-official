@@ -17,7 +17,11 @@ import {
     Briefcase,
     MapPin,
     X,
-    User
+    User,
+    ExternalLink,
+    FileText,
+    Shield,
+    Building2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -174,8 +178,8 @@ export default function EmployeesPage() {
                             <button
                                 onClick={() => setViewMode('grid')}
                                 className={`p-2 rounded-lg transition-all ${viewMode === 'grid'
-                                        ? 'bg-white text-orange-500 shadow-sm'
-                                        : 'text-slate-400 hover:text-slate-600'
+                                    ? 'bg-white text-orange-500 shadow-sm'
+                                    : 'text-slate-400 hover:text-slate-600'
                                     }`}
                             >
                                 <Grid3x3 size={18} />
@@ -183,8 +187,8 @@ export default function EmployeesPage() {
                             <button
                                 onClick={() => setViewMode('list')}
                                 className={`p-2 rounded-lg transition-all ${viewMode === 'list'
-                                        ? 'bg-white text-orange-500 shadow-sm'
-                                        : 'text-slate-400 hover:text-slate-600'
+                                    ? 'bg-white text-orange-500 shadow-sm'
+                                    : 'text-slate-400 hover:text-slate-600'
                                     }`}
                             >
                                 <List size={18} />
@@ -412,6 +416,75 @@ export default function EmployeesPage() {
                                                 {selectedEmployee.contract_end ? new Date(selectedEmployee.contract_end).toLocaleDateString() : 'N/A'}
                                             </p>
                                         </div>
+                                    </div>
+                                </div>
+
+                                {/* GOVERNMENT PORTALS - RESTORED */}
+                                <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl p-5 border-2 border-orange-100">
+                                    <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-2">
+                                        <Shield size={16} className="text-orange-600" />
+                                        Government Portals Access
+                                    </h3>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {/* Qiwa Portal */}
+                                        <a
+                                            href={`https://qiwa.sa`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="group bg-white hover:bg-orange-600 border-2 border-orange-200 hover:border-orange-600 rounded-xl p-4 transition-all duration-300 shadow-sm hover:shadow-md"
+                                        >
+                                            <div className="flex items-center justify-between mb-2">
+                                                <Building2 size={24} className="text-orange-600 group-hover:text-white transition-colors" />
+                                                <ExternalLink size={14} className="text-orange-400 group-hover:text-white transition-colors" />
+                                            </div>
+                                            <h4 className="font-bold text-slate-900 group-hover:text-white transition-colors text-sm">Qiwa</h4>
+                                            <p className="text-xs text-slate-500 group-hover:text-orange-100 transition-colors mt-1">Labor Platform</p>
+                                        </a>
+
+                                        {/* Muqeem Portal */}
+                                        <a
+                                            href={`https://muqeem.sa`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="group bg-white hover:bg-green-600 border-2 border-green-200 hover:border-green-600 rounded-xl p-4 transition-all duration-300 shadow-sm hover:shadow-md"
+                                        >
+                                            <div className="flex items-center justify-between mb-2">
+                                                <FileText size={24} className="text-green-600 group-hover:text-white transition-colors" />
+                                                <ExternalLink size={14} className="text-green-400 group-hover:text-white transition-colors" />
+                                            </div>
+                                            <h4 className="font-bold text-slate-900 group-hover:text-white transition-colors text-sm">Muqeem</h4>
+                                            <p className="text-xs text-slate-500 group-hover:text-green-100 transition-colors mt-1">Iqama: {selectedEmployee.iqama_number || 'N/A'}</p>
+                                        </a>
+
+                                        {/* GOSI Portal */}
+                                        <a
+                                            href={`https://online.gosi.gov.sa`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="group bg-white hover:bg-blue-600 border-2 border-blue-200 hover:border-blue-600 rounded-xl p-4 transition-all duration-300 shadow-sm hover:shadow-md"
+                                        >
+                                            <div className="flex items-center justify-between mb-2">
+                                                <Shield size={24} className="text-blue-600 group-hover:text-white transition-colors" />
+                                                <ExternalLink size={14} className="text-blue-400 group-hover:text-white transition-colors" />
+                                            </div>
+                                            <h4 className="font-bold text-slate-900 group-hover:text-white transition-colors text-sm">GOSI</h4>
+                                            <p className="text-xs text-slate-500 group-hover:text-blue-100 transition-colors mt-1">Social Insurance</p>
+                                        </a>
+
+                                        {/* Mudad Portal */}
+                                        <a
+                                            href={`https://mudad.sa`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="group bg-white hover:bg-purple-600 border-2 border-purple-200 hover:border-purple-600 rounded-xl p-4 transition-all duration-300 shadow-sm hover:shadow-md"
+                                        >
+                                            <div className="flex items-center justify-between mb-2">
+                                                <Calendar size={24} className="text-purple-600 group-hover:text-white transition-colors" />
+                                                <ExternalLink size={14} className="text-purple-400 group-hover:text-white transition-colors" />
+                                            </div>
+                                            <h4 className="font-bold text-slate-900 group-hover:text-white transition-colors text-sm">Mudad</h4>
+                                            <p className="text-xs text-slate-500 group-hover:text-purple-100 transition-colors mt-1">Payroll Portal</p>
+                                        </a>
                                     </div>
                                 </div>
 
