@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { generateMudadPayrollExcel, downloadExcelFile, generateMudadFilename } from '@/lib/mudadExcelGenerator';
+import { calculateEmployeeDeductions, DeductionBreakdown } from '@/lib/deductionCalculator';
 
 interface PayrollRecord {
     id?: string;
@@ -36,6 +37,8 @@ interface PayrollRecord {
     status: string;
     iqama_number?: string;
     iban?: string;
+    nationality?: string;
+    deduction_breakdown?: DeductionBreakdown;
 }
 
 export default function PayrollPage() {
@@ -157,9 +160,11 @@ export default function PayrollPage() {
                 complianceData?.map(c => [c.employee_id, c]) || []
             );
 
-            const computedPayroll = employees.map(emp => {
+            // Process each employee with comprehensive deduction calculation
+            const computedPayroll = await Promise.all(employees.map(async (emp) => {
                 const empLeaves = leaves?.filter(l => l.employee_id === emp.id) || [];
 
+                // Calculate leave days
                 let leaveDays = 0;
                 empLeaves.forEach(leave => {
                     const lStart = new Date(leave.start_date);
@@ -177,9 +182,23 @@ export default function PayrollPage() {
                 });
 
                 const baseSalary = emp.salary || 0;
-                const allowances = 0;
-                const deductions = (baseSalary / 30) * leaveDays;
-                const netSalary = baseSalary + allowances - deductions;
+                const allowances = 0; // Can be extended to include housing, transport, etc.
+
+                // Calculate all deductions using comprehensive calculator
+                const deductionBreakdown = await calculateEmployeeDeductions(
+                    {
+                        id: emp.id,
+                        full_name_en: emp.full_name_en,
+                        salary: baseSalary,
+                        nationality: emp.nationality,
+                        position: emp.position
+                    },
+                    leaveDays,
+                    selectedMonth
+                );
+
+                const totalDeductions = deductionBreakdown.total;
+                const netSalary = baseSalary + allowances - totalDeductions;
 
                 const compliance = complianceMap.get(emp.id);
 
@@ -191,14 +210,16 @@ export default function PayrollPage() {
                     basic_salary: baseSalary,
                     salary_basic: baseSalary,
                     allowances,
-                    deductions,
+                    deductions: totalDeductions,
                     leave_days: leaveDays,
                     net_salary: netSalary,
                     status: 'Draft',
                     iqama_number: compliance?.iqama_number,
-                    iban: compliance?.iban
+                    iban: compliance?.iban,
+                    nationality: emp.nationality,
+                    deduction_breakdown: deductionBreakdown
                 };
-            });
+            }));
 
             setPayrollData(computedPayroll);
             setHasExistingRecords(false);
@@ -215,6 +236,7 @@ export default function PayrollPage() {
 
         } catch (err) {
             console.error('Error generating payroll:', err);
+            alert('Error generating payroll. Please try again.');
         } finally {
             setGenerating(false);
         }
