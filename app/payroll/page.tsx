@@ -19,6 +19,7 @@ import {
     Search
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { generateMudadPayrollExcel, downloadExcelFile, generateMudadFilename } from '@/lib/mudadExcelGenerator';
 
 interface PayrollRecord {
     id?: string;
@@ -33,6 +34,8 @@ interface PayrollRecord {
     leave_days: number;
     net_salary: number;
     status: string;
+    iqama_number?: string;
+    iban?: string;
 }
 
 export default function PayrollPage() {
@@ -71,12 +74,31 @@ export default function PayrollPage() {
 
             if (existingRecords && existingRecords.length > 0) {
                 setHasExistingRecords(true);
-                const formattedData = existingRecords.map(record => ({
-                    ...record,
-                    employee_name: record.employee?.full_name_en || 'Unknown',
-                    employee_position: record.employee?.position,
-                    basic_salary: record.salary_basic
-                }));
+
+                // Fetch employee compliance data for Iqama and IBAN
+                const employeeIds = existingRecords.map(r => r.employee_id);
+                const { data: complianceData } = await supabase
+                    .from('employee_compliance')
+                    .select('employee_id, iqama_number, iban')
+                    .in('employee_id', employeeIds);
+
+                // Create a map for quick lookup
+                const complianceMap = new Map(
+                    complianceData?.map(c => [c.employee_id, c]) || []
+                );
+
+                const formattedData = existingRecords.map(record => {
+                    const compliance = complianceMap.get(record.employee_id);
+                    return {
+                        ...record,
+                        employee_name: record.employee?.full_name_en || 'Unknown',
+                        employee_position: record.employee?.position,
+                        basic_salary: record.salary_basic,
+                        iqama_number: compliance?.iqama_number,
+                        iban: compliance?.iban
+                    };
+                });
+
                 setPayrollData(formattedData);
 
                 const totalPayroll = formattedData.reduce((sum, r) => sum + (r.net_salary || 0), 0);
@@ -123,6 +145,18 @@ export default function PayrollPage() {
                 .lte('start_date', endDate)
                 .gte('end_date', startDate);
 
+            // Fetch employee compliance data for Iqama and IBAN
+            const employeeIds = employees.map(e => e.id);
+            const { data: complianceData } = await supabase
+                .from('employee_compliance')
+                .select('employee_id, iqama_number, iban')
+                .in('employee_id', employeeIds);
+
+            // Create a map for quick lookup
+            const complianceMap = new Map(
+                complianceData?.map(c => [c.employee_id, c]) || []
+            );
+
             const computedPayroll = employees.map(emp => {
                 const empLeaves = leaves?.filter(l => l.employee_id === emp.id) || [];
 
@@ -147,6 +181,8 @@ export default function PayrollPage() {
                 const deductions = (baseSalary / 30) * leaveDays;
                 const netSalary = baseSalary + allowances - deductions;
 
+                const compliance = complianceMap.get(emp.id);
+
                 return {
                     employee_id: emp.id,
                     employee_name: emp.full_name_en,
@@ -158,7 +194,9 @@ export default function PayrollPage() {
                     deductions,
                     leave_days: leaveDays,
                     net_salary: netSalary,
-                    status: 'Draft'
+                    status: 'Draft',
+                    iqama_number: compliance?.iqama_number,
+                    iban: compliance?.iban
                 };
             });
 
@@ -211,6 +249,28 @@ export default function PayrollPage() {
             alert('Error saving payroll');
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handleExportMudadExcel = async () => {
+        try {
+            if (payrollData.length === 0) {
+                alert('No payroll data to export. Please generate payroll first.');
+                return;
+            }
+
+            // Generate the Excel file in Mudad format
+            const excelBlob = await generateMudadPayrollExcel(payrollData, selectedMonth);
+
+            // Generate the filename in Mudad format
+            const filename = generateMudadFilename(selectedMonth);
+
+            // Download the file
+            downloadExcelFile(excelBlob, filename);
+
+        } catch (err) {
+            console.error('Error exporting Excel:', err);
+            alert('Error generating Excel file. Please try again.');
         }
     };
 
@@ -348,9 +408,13 @@ export default function PayrollPage() {
                                     </button>
                                 )}
 
-                                <button className="px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-semibold hover:bg-slate-50 transition-colors flex items-center gap-2">
+                                <button
+                                    onClick={handleExportMudadExcel}
+                                    disabled={payrollData.length === 0}
+                                    className="px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-semibold hover:bg-slate-50 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
                                     <Download size={18} />
-                                    Export
+                                    Export Mudad Excel
                                 </button>
                             </div>
                         </div>
