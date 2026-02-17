@@ -491,22 +491,14 @@ export default function EmployeesPage() {
                                                 </div>
                                                 {complianceData.qiwa ? (
                                                     <div className="grid grid-cols-2 gap-3 text-sm">
-                                                        <div>
-                                                            <p className="text-xs text-slate-500">Status</p>
-                                                            <p className="font-semibold text-slate-800">{complianceData.qiwa?.['Notes'] || 'N/A'}</p>
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-xs text-slate-500">Occupation</p>
-                                                            <p className="font-semibold text-slate-800">{complianceData.qiwa?.['Occupation'] || 'N/A'}</p>
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-xs text-slate-500">Skill Level</p>
-                                                            <p className="font-semibold text-slate-800">{complianceData.qiwa?.['Skill classification'] || 'N/A'}</p>
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-xs text-slate-500">Employee ID</p>
-                                                            <p className="font-semibold text-slate-800">{complianceData.qiwa?.['Employee ID'] || 'N/A'}</p>
-                                                        </div>
+                                                        {Object.entries(complianceData.qiwa || {})
+                                                            .filter(([key]) => !['Employee ID', 'Identity Number', 'Iqama Number'].includes(key))
+                                                            .map(([key, value]) => (
+                                                                <div key={key} className="break-words">
+                                                                    <p className="text-xs text-slate-500 capitalize">{key.replace(/_/g, ' ')}</p>
+                                                                    <p className="font-semibold text-slate-800">{value ? String(value) : 'N/A'}</p>
+                                                                </div>
+                                                            ))}
                                                     </div>
                                                 ) : <p className="text-sm text-slate-500 italic">No Qiwa data found for this employee.</p>}
                                             </div>
@@ -519,26 +511,14 @@ export default function EmployeesPage() {
                                                 </div>
                                                 {complianceData.muqeem ? (
                                                     <div className="grid grid-cols-2 gap-3 text-sm">
-                                                        <div>
-                                                            <p className="text-xs text-slate-500">Iqama Number</p>
-                                                            <p className="font-semibold text-slate-800">{complianceData.muqeem?.['Iqama Number'] || 'N/A'}</p>
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-xs text-slate-500">Iqama Expiry</p>
-                                                            <p className="font-semibold text-slate-800">
-                                                                {complianceData.muqeem?.['Iqama Expiry Date'] || 'N/A'}
-                                                            </p>
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-xs text-slate-500">Passport Number</p>
-                                                            <p className="font-semibold text-slate-800">{complianceData.muqeem?.['Passport Number'] || 'N/A'}</p>
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-xs text-slate-500">Passport Expiry</p>
-                                                            <p className="font-semibold text-slate-800">
-                                                                {complianceData.muqeem?.['Passport Expiry Date'] || 'N/A'}
-                                                            </p>
-                                                        </div>
+                                                        {Object.entries(complianceData.muqeem || {})
+                                                            .filter(([key]) => !['Iqama Number', 'Passport Number'].includes(key))
+                                                            .map(([key, value]) => (
+                                                                <div key={key} className="break-words">
+                                                                    <p className="text-xs text-slate-500 capitalize">{key.replace(/_/g, ' ')}</p>
+                                                                    <p className="font-semibold text-slate-800">{value ? String(value) : 'N/A'}</p>
+                                                                </div>
+                                                            ))}
                                                     </div>
                                                 ) : <p className="text-sm text-slate-500 italic">No Muqeem data found for this employee.</p>}
                                             </div>
@@ -551,24 +531,14 @@ export default function EmployeesPage() {
                                                 </div>
                                                 {complianceData.gosi ? (
                                                     <div className="grid grid-cols-2 gap-3 text-sm">
-                                                        <div>
-                                                            <p className="text-xs text-slate-500">GOSI Wage</p>
-                                                            <p className="font-semibold text-slate-800">SAR {complianceData.gosi?.['BASICWAGE'] || 'N/A'}</p>
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-xs text-slate-500">Total Wage</p>
-                                                            <p className="font-semibold text-slate-800">SAR {complianceData.gosi?.['TOTAL WAGE'] || 'N/A'}</p>
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-xs text-slate-500">Pension Eligible</p>
-                                                            <p className="font-semibold text-slate-800">{complianceData.gosi?.['PENSION REFORM ELIGIBILITY'] == '1' ? 'Yes' : 'No'}</p>
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-xs text-slate-500">Joining Date</p>
-                                                            <p className="font-semibold text-slate-800">
-                                                                {complianceData.gosi?.['JOINING DATE'] || 'N/A'}
-                                                            </p>
-                                                        </div>
+                                                        {Object.entries(complianceData.gosi || {})
+                                                            .filter(([key]) => !['IDENTITY', 'NATIONALITY'].includes(key))
+                                                            .map(([key, value]) => (
+                                                                <div key={key} className="break-words">
+                                                                    <p className="text-xs text-slate-500 capitalize">{key.replace(/_/g, ' ').toLowerCase()}</p>
+                                                                    <p className="font-semibold text-slate-800">{value ? String(value) : 'N/A'}</p>
+                                                                </div>
+                                                            ))}
                                                     </div>
                                                 ) : <p className="text-sm text-slate-500 italic">No GOSI data found for this employee.</p>}
                                             </div>
@@ -581,18 +551,14 @@ export default function EmployeesPage() {
                                                 </div>
                                                 {complianceData.mudad ? (
                                                     <div className="grid grid-cols-2 gap-3 text-sm">
-                                                        <div>
-                                                            <p className="text-xs text-slate-500">Status</p>
-                                                            <p className="font-semibold text-slate-800">{complianceData.mudad?.['Status'] || 'N/A'}</p>
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-xs text-slate-500">Salary</p>
-                                                            <p className="font-semibold text-slate-800">SAR {complianceData.mudad?.['Salary'] || 'N/A'}</p>
-                                                        </div>
-                                                        <div className="col-span-2">
-                                                            <p className="text-xs text-slate-500">IBAN</p>
-                                                            <p className="font-semibold text-slate-800">{complianceData.mudad?.['IBAN'] || 'Add IBAN Number'}</p>
-                                                        </div>
+                                                        {Object.entries(complianceData.mudad || {})
+                                                            .filter(([key]) => !['Iqama ID'].includes(key))
+                                                            .map(([key, value]) => (
+                                                                <div key={key} className="break-words">
+                                                                    <p className="text-xs text-slate-500 capitalize">{key.replace(/_/g, ' ')}</p>
+                                                                    <p className="font-semibold text-slate-800">{value ? String(value) : 'N/A'}</p>
+                                                                </div>
+                                                            ))}
                                                     </div>
                                                 ) : <p className="text-sm text-slate-500 italic">No Mudad data found for this employee.</p>}
                                             </div>
